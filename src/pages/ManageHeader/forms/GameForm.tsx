@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { HeaderSubItem, OtherGameCard, ChecklistItem, ChooseGameCard } from './types';
+import type { HeaderSubItem, OtherGameCard, ChecklistItem, ChooseGameCard } from '@/components/ManageHeader/types';
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
+import { useGamesQuery } from '@/hooks/useGames';
+import apiClient from '@/utils/apiClient';
 
 interface GameFormProps {
-    onClose: () => void;
+  onClose: () => void;
   onSave: (subItem: Partial<HeaderSubItem>) => void;
   initialData: HeaderSubItem | null;
 }
 
 const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => {
+  const { data: gamesData, isLoading: isGamesLoading } = useGamesQuery();
+  const availableGames = gamesData?.games || [];
+
+  // ─── Link Mode (Pre-existing vs Add New) ────────────────────
+  const [linkMode, setLinkMode] = useState<'existing' | 'new'>('new');
+  const [selectedGameId, setSelectedGameId] = useState<string>('');
+
   // ─── Navigation fields ─────────────────────────────────────
   const [name, setName] = useState('');
   const [path, setPath] = useState('');
@@ -46,68 +55,116 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
   const [chooseGameCards, setChooseGameCards] = useState<ChooseGameCard[]>([]);
 
   useEffect(() => {
-    if (true) {
-      setName(initialData?.name || '');
-      setPath(initialData?.path || '');
-      setIcon(initialData?.icon || '');
-      setPageType(initialData?.pageType || 'game');
-      setPageHeadline(initialData?.pageHeadline || '');
-      setPageTagline(initialData?.pageTagline || '');
-      setCardDescription(initialData?.cardDescription || '');
-      setPageHeroImage(initialData?.pageHeroImage || '');
-      setHeroBookNowLink(initialData?.heroBookNowLink || '');
-      // Game
-      setPeoplePerMachine(initialData?.pageDetails?.peoplePerMachine || '');
-      setTimeMin(initialData?.pageDetails?.timeMin || '');
-      setLanes(initialData?.pageDetails?.lanes || '');
-      setPrice(initialData?.pageDetails?.price || '');
-      setMinAge(initialData?.pageDetails?.minAge || '');
-      setWheelchairAccess(initialData?.pageDetails?.wheelchairAccess || false);
-      setOtherGames(initialData?.otherGames || []);
+    if (initialData) {
+      setName(initialData.name || '');
+      setPath(initialData.path || initialData.slug || '');
+      setIcon(initialData.icon || '');
+      setPageType(initialData.pageType === 'group-activity' ? 'group-activity' : 'game');
+      setPageHeadline(initialData.pageHeadline || '');
+      setPageTagline(initialData.pageTagline || '');
+      setCardDescription(initialData.cardDescription || '');
+      setPageHeroImage(initialData.pageHeroImage || '');
+      setHeroBookNowLink(initialData.heroBookNowLink || '');
+      // Game details
+      setPeoplePerMachine(initialData.pageDetails?.peoplePerMachine || '');
+      setTimeMin(initialData.pageDetails?.timeMin || '');
+      setLanes(initialData.pageDetails?.lanes || '');
+      setPrice(initialData.pageDetails?.price ? String(initialData.pageDetails.price) : '');
+      setMinAge(initialData.pageDetails?.minAge || '');
+      setWheelchairAccess(initialData.pageDetails?.wheelchairAccess || false);
+      setOtherGames(initialData.otherGames || []);
       // Group Activity
-      setSectionHeadline(initialData?.sectionHeadline || '');
-      setSectionDescription(initialData?.sectionDescription || '');
-      setChecklistItems(initialData?.checklistItems || []);
-      setHowToBookHeadline(initialData?.howToBookHeadline || '');
-      setHowToBookBody(initialData?.howToBookBody || '');
-      setHowToBookLink(initialData?.howToBookLink || '');
-      setHowToBookEmail(initialData?.howToBookEmail || '');
-      setHowToBookPhone(initialData?.howToBookPhone || '');
-      setChooseGamesHeading(initialData?.chooseGamesHeading || '');
-      setChooseGameCards(initialData?.chooseGameCards || []);
+      setSectionHeadline(initialData.sectionHeadline || '');
+      setSectionDescription(initialData.sectionDescription || '');
+      setChecklistItems(initialData.checklistItems || []);
+      setHowToBookHeadline(initialData.howToBookHeadline || '');
+      setHowToBookBody(initialData.howToBookBody || '');
+      setHowToBookLink(initialData.howToBookLink || '');
+      setHowToBookEmail(initialData.howToBookEmail || '');
+      setHowToBookPhone(initialData.howToBookPhone || '');
+      setChooseGamesHeading(initialData.chooseGamesHeading || '');
+      setChooseGameCards(initialData.chooseGameCards || []);
+
+      if (initialData.linkedItemId) {
+        setLinkMode('existing');
+        setSelectedGameId(initialData.linkedItemId);
+      }
     }
   }, [initialData]);
 
-  
+  // Handle selecting an existing game from dropdown
+  const handleSelectGame = (gameId: string) => {
+    setSelectedGameId(gameId);
+    const foundGame = availableGames.find(g => g._id === gameId);
+    if (foundGame) {
+      setName(foundGame.name);
+      setPath(`/games/${foundGame.slug}`);
+      setPageHeadline(foundGame.name.toUpperCase());
+      setCardDescription(foundGame.description);
+      if (foundGame.imageUrl) {
+        setPageHeroImage(foundGame.imageUrl);
+      }
+      setPrice(foundGame.priceFrom ? String(foundGame.priceFrom) : '');
+      if (foundGame.duration) {
+        setTimeMin(foundGame.duration);
+      }
+    }
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !path.trim()) return;
-    onSave({
-      name: name.trim(),
-      path: path.trim(),
-      icon,
-      pageType,
-      pageHeadline,
-      pageTagline,
-      cardDescription,
-      pageHeroImage,
-      heroBookNowLink,
-      // Game
-      pageDetails: { peoplePerMachine, timeMin, lanes, price, minAge, wheelchairAccess },
-      otherGames,
-      // Group Activity
-      sectionHeadline,
-      sectionDescription,
-      checklistItems,
-      howToBookHeadline,
-      howToBookBody,
-      howToBookLink,
-      howToBookEmail,
-      howToBookPhone,
-      chooseGamesHeading,
-      chooseGameCards,
-    });
+    if (!name.trim() || !path.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const targetGameId = linkMode === 'existing' ? selectedGameId : (initialData?.linkedItemId || selectedGameId);
+
+      // If gameId is present and price/tags/isActive are provided, sync with PATCH /api/games/:gameId
+      if (targetGameId) {
+        try {
+          const numPrice = parseFloat(price);
+          await apiClient.patch(`/games/${targetGameId}`, {
+            ...(isNaN(numPrice) ? {} : { priceFrom: numPrice }),
+            isActive: true,
+          });
+        } catch (err) {
+          console.error('Failed to sync game updates via PATCH /api/games/:id', err);
+        }
+      }
+
+      onSave({
+        name: name.trim(),
+        path: path.trim(),
+        slug: path.trim().replace(/^\//, ''),
+        type: 'game',
+        linkedItemId: targetGameId || undefined,
+        icon,
+        pageType,
+        pageHeadline,
+        pageTagline,
+        cardDescription,
+        pageHeroImage,
+        heroBookNowLink,
+        // Game
+        pageDetails: { peoplePerMachine, timeMin, lanes, price, minAge, wheelchairAccess },
+        otherGames,
+        // Group Activity
+        sectionHeadline,
+        sectionDescription,
+        checklistItems,
+        howToBookHeadline,
+        howToBookBody,
+        howToBookLink,
+        howToBookEmail,
+        howToBookPhone,
+        chooseGamesHeading,
+        chooseGameCards,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
@@ -176,7 +233,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#3A3530] flex-shrink-0">
           <h2 className="text-lg font-semibold text-white">
-            {initialData ? 'Edit Sub-item' : 'Add Sub-item'}
+            {initialData ? 'Edit Sub-item / Game' : 'Add Sub-item / Game'}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <CloseIcon />
@@ -185,17 +242,60 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-8">
 
+          {/* ── Link Mode Selection ── */}
+          <div className="p-4 bg-[#252525] border border-[#3A3530] rounded-lg space-y-3">
+            <label className={labelCls}>Game Source</label>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setLinkMode('existing')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${linkMode === 'existing' ? 'bg-[#FB3748] text-white' : 'bg-[#1C1C1C] text-gray-300 hover:bg-[#3A3530]'}`}
+              >
+                🔗 Select Pre-existing Game
+              </button>
+              <button
+                type="button"
+                onClick={() => setLinkMode('new')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${linkMode === 'new' ? 'bg-[#FB3748] text-white' : 'bg-[#1C1C1C] text-gray-300 hover:bg-[#3A3530]'}`}
+              >
+                ✨ Add New Game Details
+              </button>
+            </div>
+
+            {linkMode === 'existing' && (
+              <div className="mt-3">
+                <label className={labelSmCls}>Choose Pre-existing Game</label>
+                {isGamesLoading ? (
+                  <p className="text-xs text-gray-400">Loading games...</p>
+                ) : (
+                  <select
+                    value={selectedGameId}
+                    onChange={e => handleSelectGame(e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="">-- Select a Game --</option>
+                    {availableGames.map(game => (
+                      <option key={game._id} value={game._id}>
+                        {game.name} ({game.slug})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* ── Navigation Setup ── */}
           <div>
             <h3 className={sectionTitleCls}>Navigation Setup</h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className={labelCls}>Name</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Birthday Parties" className={inputCls} />
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Indoor Mini Golf" className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>URL Path</label>
-                <input type="text" value={path} onChange={e => setPath(e.target.value)} placeholder="e.g. /groups/birthday" className={inputCls} />
+                <label className={labelCls}>URL Path / Slug</label>
+                <input type="text" value={path} onChange={e => setPath(e.target.value)} placeholder="e.g. /games/mini-golf" className={inputCls} />
               </div>
             </div>
 
@@ -446,8 +546,28 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
 
           {/* Submit */}
           <div className="flex justify-end gap-3 pt-4 border-t border-[#3A3530]">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg font-medium text-gray-300 hover:text-white hover:bg-[#2A2A2A] transition-colors">Cancel</button>
-            <button type="submit" disabled={!name.trim() || !path.trim()} className="bg-[#FB3748] text-white px-6 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Save</button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-lg font-medium text-gray-300 hover:text-white hover:bg-[#2A2A2A] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim() || !path.trim() || isSubmitting}
+              className="bg-[#FB3748] text-white px-6 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>Save</span>
+              )}
+            </button>
           </div>
         </form>
       </div>
