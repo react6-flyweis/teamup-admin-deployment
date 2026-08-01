@@ -3,11 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { HeaderCategory } from '@/components/ManageHeader/types';
 import { initialMockData } from '@/components/ManageHeader/mockData';
 import { Chevron } from '@/assets/icons';
+import { useUpdateCategoryMutation } from '@/hooks/useHeaderCategories';
 
 const CategoryFormPage: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
   const [name, setName] = useState('');
+  const updateCategory = useUpdateCategoryMutation();
 
   useEffect(() => {
     if (categoryId && categoryId !== 'new') {
@@ -26,6 +28,10 @@ const CategoryFormPage: React.FC = () => {
     e.preventDefault();
     if (!name.trim()) return;
 
+    if (categoryId && categoryId !== 'new') {
+      updateCategory.mutate({ categoryId, name: name.trim() });
+    }
+
     const saved = localStorage.getItem('headerCategories');
     let categories: HeaderCategory[] = saved ? JSON.parse(saved) : initialMockData;
 
@@ -41,9 +47,6 @@ const CategoryFormPage: React.FC = () => {
     }
 
     localStorage.setItem('headerCategories', JSON.stringify(categories));
-    
-    // We should also bump version if needed, but managing local state in ManageHeader takes care of it.
-    // However, since we navigate back, ManageHeader will remount and read from localStorage.
     navigate('/manage-header');
   };
 
