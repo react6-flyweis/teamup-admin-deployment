@@ -1,3 +1,10 @@
+export interface ChooseGameCard {
+  id: string;
+  title: string;
+  image: string;
+  link?: string;
+}
+
 export interface OtherGameCard {
   id: string;
   title: string;
@@ -44,7 +51,24 @@ export interface HeaderSubItem {
   name: string;
   icon: string; // URL or icon identifier
   path: string;
-  isHidden: boolean;
+  isHidden?: boolean;
+  isActive?: boolean;
+  // Game Linking / API integration fields
+  slug?: string;
+  type?: 'game' | string;
+  linkedItemId?: string;
+  linkedGame?: {
+    _id: string;
+    name: string;
+    slug: string;
+    description: string;
+    category?: string;
+    imageUrl?: string;
+    duration?: string;
+    priceFrom?: number;
+    tags?: string[];
+    isActive?: boolean;
+  };
 
   // ─── Choose Game Page Fields ───────────────────────────────
   pageHeadline?: string;
@@ -99,6 +123,7 @@ export interface HeaderSubItem {
   // Choose Your Games (ID references to 'Choose Game' category sub-items)
   chooseGamesHeading?: string;
   chooseGameIds?: string[]; // IDs from Choose Game category sub-items
+  chooseGameCards?: ChooseGameCard[];
 }
 
 export interface HeaderCategory {
