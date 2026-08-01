@@ -3,6 +3,7 @@ import type { HeaderSubItem } from './types';
 import { EditIcon, TrashIcon } from '@/assets/icons';
 import { useNavigate } from 'react-router-dom';
 import Toggle from '@/components/common/Toggle';
+import { useUpdateMenuItemStatusMutation } from '@/hooks/useHeaderCategories';
 
 interface SubItemListProps {
   subItems: HeaderSubItem[];
@@ -14,6 +15,7 @@ interface SubItemListProps {
 
 const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categoryId, availableGames, onUpdate }) => {
   const navigate = useNavigate();
+  const updateMenuItemStatus = useUpdateMenuItemStatusMutation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -28,9 +30,16 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
   }, []);
 
   const toggleVisibility = (id: string) => {
+    const item = subItems.find(i => i.id === id);
+    const newIsActive = item ? !!item.isHidden : false;
+
+    // Optimistically update parent state
     onUpdate(subItems.map(item => 
       item.id === id ? { ...item, isHidden: !item.isHidden } : item
     ));
+
+    // Send status update API request: PATCH /api/menu-items/:menuItemId
+    updateMenuItemStatus.mutate({ menuItemId: id, isActive: newIsActive });
   };
 
   const handleDelete = (id: string) => {
@@ -94,7 +103,9 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
                   <h5 className={`text-sm font-medium ${item.isHidden ? 'text-gray-500 line-through' : 'text-white'}`}>
                     {item.name}
                   </h5>
-                  <p className="text-xs text-gray-400 mt-0.5">{item.path}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {item.slug ? (item.slug.startsWith('/') ? item.slug : `/${item.slug}`) : (item.path.startsWith('/') ? item.path : `/${item.path}`)}
+                  </p>
                 </div>
               </div>
 
