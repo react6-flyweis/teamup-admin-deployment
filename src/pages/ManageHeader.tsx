@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { HeaderCategory, HeaderSubItem } from '@/components/ManageHeader/types';
-import { useHeaderCategoriesQuery } from '@/hooks/useHeaderCategories';
+import { useHeaderCategoriesQuery, useUpdateCategoryMutation } from '@/hooks/useHeaderCategories';
 import { useLocationsQuery } from '@/hooks/useLocations';
 import { EditIcon, TrashIcon } from '@/assets/icons';
 import SubItemList from '@/components/ManageHeader/SubItemList';
@@ -10,6 +10,7 @@ import TeamUpLogo from '@/assets/TeamUp.png';
 
 const ManageHeader: React.FC = () => {
   const { data: categoriesData, isLoading: isCategoriesLoading } = useHeaderCategoriesQuery();
+  const updateCategory = useUpdateCategoryMutation();
   const { data: locationsData, isLoading: isLocationsLoading } = useLocationsQuery();
   const [categories, setCategories] = useState<HeaderCategory[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -40,7 +41,14 @@ const ManageHeader: React.FC = () => {
   };
 
   const toggleVisibility = (id: string) => {
+    const category = categories.find(cat => cat.id === id);
+    const newIsActive = category ? !!category.isHidden : false;
+
+    // Optimistically update local UI state
     saveCategories(categories.map(cat => cat.id === id ? { ...cat, isHidden: !cat.isHidden } : cat));
+
+    // Send PATCH /api/menu-items/categories/:categoryId with { isActive }
+    updateCategory.mutate({ categoryId: id, isActive: newIsActive });
   };
 
   const handleDelete = (id: string) => {
