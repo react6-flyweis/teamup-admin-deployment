@@ -34,6 +34,17 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
   const [otherGamesHeading, setOtherGamesHeading] = useState('');
   const [otherGamesCards, setOtherGamesCards] = useState<FeaturedEventCard[]>([]);
 
+  const iconFileRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setter(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
   useEffect(() => {
     if (initialData) {
       setName(initialData.name || '');
@@ -143,7 +154,7 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
               <h3 className={sectionHead}>
                 <span className="text-[#E1017D]">01</span> Navigation Setup
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className={labelCls}>Item Name (in menu)</label>
                   <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Queens Night" required className={inputCls} />
@@ -151,6 +162,26 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
                 <div>
                   <label className={labelCls}>Page URL Path</label>
                   <input type="text" value={path} onChange={e => setPath(e.target.value)} placeholder="e.g. /groups/queens-night" required className={inputCls} />
+                </div>
+              </div>
+              {/* Icon upload */}
+              <div>
+                <label className={labelCls}>Nav Icon (shown in header bar)</label>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    {icon ? (
+                      <div className="w-16 h-16 rounded-xl bg-[#2A2A2A] border border-[#3A3530] overflow-hidden flex items-center justify-center group relative">
+                        <img src={icon} alt="icon" className="w-full h-full object-contain p-1" onError={e => { e.currentTarget.style.display='none'; }} />
+                        <button type="button" onClick={() => setIcon('')} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"><CloseIcon /></button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => iconFileRef.current?.click()} className="w-16 h-16 rounded-xl bg-[#2A2A2A] border border-dashed border-[#3A3530] hover:border-[#E1017D] flex flex-col items-center justify-center text-gray-500 hover:text-[#E1017D] transition-colors">
+                        <UploadIcon /><span className="text-[10px] mt-1">Icon</span>
+                      </button>
+                    )}
+                    <input type="file" ref={iconFileRef} className="hidden" accept="image/*" onChange={e => handleFileChange(e, setIcon)} />
+                  </div>
+                  <input type="text" value={icon} onChange={e => setIcon(e.target.value)} placeholder="Or paste icon URL" className={`${inputCls} flex-1`} />
                 </div>
               </div>
             </section>
@@ -218,7 +249,7 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
                     </button>
                   </div>
                   <div className="space-y-3">
-                    {checklistItems.map((item, index) => (
+                    {checklistItems.map((item) => (
                       <div key={item.id} className="flex gap-3 items-start bg-[#1C1C1C] p-3 rounded-lg border border-[#3A3530]">
                         <div className="flex-1 space-y-2">
                           <input type="text" value={item.title} onChange={e => updateChecklistItem(item.id, 'title', e.target.value)} placeholder={`Title (e.g. 2 X GAMES)`} className={inputSmCls} />

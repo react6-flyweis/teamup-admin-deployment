@@ -4,9 +4,12 @@ import { useHeaderCategoriesQuery, useUpdateCategoryMutation } from '@/hooks/use
 import { useLocationsQuery } from '@/hooks/useLocations';
 import { EditIcon, TrashIcon } from '@/assets/icons';
 import SubItemList from '@/components/ManageHeader/SubItemList';
+import AddLocationModal from '@/components/ManageHeader/AddLocationModal';
 import { useNavigate } from 'react-router-dom';
 import Toggle from '@/components/common/Toggle';
 import TeamUpLogo from '@/assets/TeamUp.png';
+import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
+import { deleteMenuItem } from '@/hooks/useHeaderSubItems';
 
 const ManageHeader: React.FC = () => {
   const { data: categoriesData, isLoading: isCategoriesLoading } = useHeaderCategoriesQuery();
@@ -15,6 +18,7 @@ const ManageHeader: React.FC = () => {
   const [categories, setCategories] = useState<HeaderCategory[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [locations, setLocations] = useState<string[]>(['🇺🇸 Folsom, CA']);
+  const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,6 +39,11 @@ const ManageHeader: React.FC = () => {
     }
   }, [locationsData]);
 
+  const handleRemoveLocation = (indexToRemove: number) => {
+    setLocations(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+
 
   const saveCategories = (newCategories: HeaderCategory[]) => {
     setCategories(newCategories);
@@ -51,13 +60,25 @@ const ManageHeader: React.FC = () => {
     updateCategory.mutate({ categoryId: id, isActive: newIsActive });
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
-      const updated = categories.filter(cat => cat.id !== id);
-      saveCategories(updated);
-      if (selectedCategoryId === id) {
-        setSelectedCategoryId(updated.length > 0 ? updated[0].id : null);
-      }
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+
+  const confirmDeleteCategory = async () => {
+    if (!deletingCategoryId) return;
+    const id = deletingCategoryId;
+    setIsDeletingCategory(true);
+    const updated = categories.filter(cat => cat.id !== id);
+    saveCategories(updated);
+    if (selectedCategoryId === id) {
+      setSelectedCategoryId(updated.length > 0 ? updated[0].id : null);
+    }
+    try {
+      await deleteMenuItem(id);
+    } catch (err) {
+      console.error('Error deleting menu item category:', err);
+    } finally {
+      setIsDeletingCategory(false);
+      setDeletingCategoryId(null);
     }
   };
 
@@ -127,7 +148,8 @@ const ManageHeader: React.FC = () => {
                       <div className="absolute top-full left-0 mt-1 w-48 bg-[#111111] border border-[#3A3530] rounded shadow-2xl opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
                         <div className="py-2">
                           {cat.subItems.map(sub => (
-                            <div key={sub.id} className="px-4 py-2 hover:bg-[#E1017D] hover:text-white text-gray-300 text-sm transition-colors">
+                            <div key={sub.id} className="px-4 py-2 hover:bg-[#E1017D] hover:text-white text-gray-300 text-sm transition-colors flex items-center gap-2">
+                              {sub.icon && <img src={sub.icon} alt="" className="w-4 h-4 object-contain" onError={e => { e.currentTarget.style.display = 'none'; }} />}
                               {sub.name}
                             </div>
                           ))}
@@ -212,7 +234,7 @@ const ManageHeader: React.FC = () => {
                       <EditIcon size={14} color="currentColor" />
                     </button>
                     <button
-                      onClick={() => handleDelete(category.id)}
+                      onClick={() => setDeletingCategoryId(category.id)}
                       className="text-red-400 hover:text-red-300 p-1 transition-colors"
                     >
                       <TrashIcon size={14} color="currentColor" />
@@ -228,6 +250,7 @@ const ManageHeader: React.FC = () => {
             <div className="p-4 border-b border-[#3A3530] flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Locations</span>
               <button
+                onClick={() => setIsAddLocationOpen(true)}
                 className="text-xs bg-[#00B4D8] hover:bg-cyan-600 text-white px-2 py-1 rounded transition-colors font-medium"
               >
                 + Add
@@ -239,6 +262,7 @@ const ManageHeader: React.FC = () => {
                   <p className="text-sm font-medium text-gray-300 truncate">{loc}</p>
                   {idx > 0 && (
                     <button
+                      onClick={() => handleRemoveLocation(idx)}
                       className="text-red-400 hover:text-red-300 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <TrashIcon size={14} color="currentColor" />
@@ -286,6 +310,22 @@ const ManageHeader: React.FC = () => {
       </div>
 
 
+      {/* Confirm Delete Category Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingCategoryId}
+        title="Delete Category"
+        message="Are you sure you want to delete this category? This action cannot be undone."
+        itemName={categories.find(c => c.id === deletingCategoryId)?.name}
+        isDeleting={isDeletingCategory}
+        onConfirm={confirmDeleteCategory}
+        onCancel={() => setDeletingCategoryId(null)}
+      />
+
+      {/* Add Location Modal */}
+      <AddLocationModal
+        isOpen={isAddLocationOpen}
+        onClose={() => setIsAddLocationOpen(false)}
+      />
     </div>
   );
 };

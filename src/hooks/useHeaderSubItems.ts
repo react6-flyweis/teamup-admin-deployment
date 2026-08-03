@@ -84,7 +84,7 @@ export interface MenuItemPayload {
   icon?: string;
   iconUrl?: string;
   type: string;
-  linkedItemId: string;
+  linkedItemId?: string;
   order?: number;
   isActive?: boolean;
 }

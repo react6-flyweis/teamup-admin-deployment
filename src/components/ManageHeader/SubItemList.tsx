@@ -6,6 +6,8 @@ import Toggle from '@/components/common/Toggle';
 import { useUpdateMenuItemMutation } from '@/hooks/useHeaderCategories';
 import { deleteMenuItem, deleteGroupActivity, deleteTeamParty, deleteBoomBundle, deleteQueensNight } from '@/hooks/useHeaderSubItems';
 import { useQueryClient } from '@tanstack/react-query';
+import SimpleLinkModal from './SimpleLinkModal';
+import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
 
 interface SubItemListProps {
   subItems: HeaderSubItem[];
@@ -20,6 +22,10 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
   const queryClient = useQueryClient();
   const updateMenuItemMutation = useUpdateMenuItemMutation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [editingSubItem, setEditingSubItem] = useState<HeaderSubItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<HeaderSubItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,25 +51,78 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
     updateMenuItemMutation.mutate({ menuItemId: id, payload: { isActive: newIsActive } });
   };
 
-  const handleDelete = async (item: HeaderSubItem) => {
-    if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
-      // Optimistically update parent state
-      onUpdate(subItems.filter(i => i.id !== item.id));
+  const confirmDeleteSubItem = async () => {
+    if (!deletingItem) return;
+    const item = deletingItem;
+    setIsDeleting(true);
 
-      try {
-        await deleteMenuItem(item.id);
-        const type = item.type || item.pageType;
-        if (item.linkedItemId) {
-          if (type === 'group-activity') await deleteGroupActivity(item.linkedItemId).catch(() => {});
-          else if (type === 'team-parties') await deleteTeamParty(item.linkedItemId).catch(() => {});
-          else if (type === 'boom-bundle') await deleteBoomBundle(item.linkedItemId).catch(() => {});
-          else if (type === 'queens-night') await deleteQueensNight(item.linkedItemId).catch(() => {});
-        }
-      } catch (err) {
-        console.error('Error deleting menu item or entity:', err);
+    // Optimistically update parent state
+    onUpdate(subItems.filter(i => i.id !== item.id));
+
+    try {
+      await deleteMenuItem(item.id);
+      const type = item.type || item.pageType;
+      if (item.linkedItemId) {
+        if (type === 'group-activity') await deleteGroupActivity(item.linkedItemId).catch(() => {});
+        else if (type === 'team-parties') await deleteTeamParty(item.linkedItemId).catch(() => {});
+        else if (type === 'boom-bundle') await deleteBoomBundle(item.linkedItemId).catch(() => {});
+        else if (type === 'queens-night') await deleteQueensNight(item.linkedItemId).catch(() => {});
       }
+    } catch (err) {
+      console.error('Error deleting menu item or entity:', err);
+    } finally {
+      setIsDeleting(false);
+      setDeletingItem(null);
+    }
 
-      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+    queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+  };
+
+  const getItemType = (item: HeaderSubItem): string => {
+    const rawType = item.type || item.pageType;
+    if (!rawType) return 'link';
+    return rawType;
+  };
+
+  const handleEditItem = (item: HeaderSubItem) => {
+    const itemType = getItemType(item);
+    if (['link', 'simple-link', 'custom', 'external'].includes(itemType)) {
+      setEditingSubItem(item);
+      setIsLinkModalOpen(true);
+    } else {
+      navigate(`/manage-header/${categoryId}/${itemType}/${item.id}`);
+    }
+  };
+
+  const handleSaveSimpleLink = (savedItem: HeaderSubItem) => {
+    const exists = subItems.some(i => i.id === savedItem.id);
+    if (exists) {
+      onUpdate(subItems.map(i => i.id === savedItem.id ? { ...i, ...savedItem } : i));
+    } else {
+      onUpdate([...subItems, savedItem]);
+    }
+  };
+
+  const getTypeBadge = (typeStr: string) => {
+    switch (typeStr) {
+      case 'game':
+        return <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-purple-900/40 text-purple-300 border border-purple-700/50">🎮 Game</span>;
+      case 'group-activity':
+        return <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-pink-900/40 text-pink-300 border border-pink-700/50">🎉 Group Activity</span>;
+      case 'team-parties':
+        return <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-blue-900/40 text-blue-300 border border-blue-700/50">🤝 Team Parties</span>;
+      case 'boom-bundle':
+        return <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-amber-900/40 text-amber-300 border border-amber-700/50">💥 Boom Bundle</span>;
+      case 'queens-night':
+        return <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-rose-900/40 text-rose-300 border border-rose-700/50">👑 Queens Night</span>;
+      case 'custom':
+        return <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-emerald-900/40 text-emerald-300 border border-emerald-700/50">⚙️ Custom</span>;
+      case 'external':
+        return <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-cyan-900/40 text-cyan-300 border border-cyan-700/50">🌐 External</span>;
+      case 'link':
+      case 'simple-link':
+      default:
+        return <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-gray-800 text-gray-300 border border-gray-600/50">🔗 Link</span>;
     }
   };
 
@@ -96,6 +155,16 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
               <button onClick={() => navigate(`/manage-header/${categoryId}/queens-night/new`)} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#2C2C2C] hover:text-white transition-colors">
                 👑 Queens Night
               </button>
+              <button
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  setEditingSubItem(null);
+                  setIsLinkModalOpen(true);
+                }}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-[#2C2C2C] hover:text-white transition-colors border-t border-[#3A3530]"
+              >
+                🔗 Simple Link
+              </button>
             </div>
           )}
         </div>
@@ -106,7 +175,6 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
       ) : (
         <div className="grid gap-2">
           {subItems.map((item) => {
-            const pageType = item.type || item.pageType || 'game';
             return (
               <div key={item.id} className="flex items-center justify-between p-3 bg-[#2A2A2A] rounded-lg border border-[#3A3530]">
                 <div className="flex items-center gap-4 flex-1">
@@ -118,9 +186,12 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
                     )}
                   </div>
                   <div>
-                    <h5 className={`text-sm font-medium ${item.isHidden ? 'text-gray-500 line-through' : 'text-white'}`}>
-                      {item.name}
-                    </h5>
+                    <div className="flex items-center gap-2">
+                      <h5 className={`text-sm font-medium ${item.isHidden ? 'text-gray-500 line-through' : 'text-white'}`}>
+                        {item.name}
+                      </h5>
+                      {getTypeBadge(getItemType(item))}
+                    </div>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {item.slug ? (item.slug.startsWith('/') ? item.slug : `/${item.slug}`) : (item.path ? (item.path.startsWith('/') ? item.path : `/${item.path}`) : '')}
                     </p>
@@ -137,13 +208,13 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
                     />
                   </div>
                   <button 
-                    onClick={() => navigate(`/manage-header/${categoryId}/${pageType}/${item.id}`)}
+                    onClick={() => handleEditItem(item)}
                     className="text-blue-400 hover:text-blue-300 transition-colors"
                   >
                     <EditIcon size={18} color="currentColor" />
                   </button>
                   <button 
-                    onClick={() => handleDelete(item)}
+                    onClick={() => setDeletingItem(item)}
                     className="text-red-400 hover:text-red-300 transition-colors"
                   >
                     <TrashIcon size={18} color="currentColor" />
@@ -154,6 +225,27 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
           })}
         </div>
       )}
+
+      {/* Simple Link Modal */}
+      <SimpleLinkModal
+        isOpen={isLinkModalOpen}
+        onClose={() => setIsLinkModalOpen(false)}
+        categoryId={categoryId}
+        categoryName={categoryName}
+        initialData={editingSubItem}
+        onSaveSuccess={handleSaveSimpleLink}
+      />
+
+      {/* Confirm Delete Sub-item Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingItem}
+        title="Delete Sub-item"
+        message="Are you sure you want to delete this sub-item? This action cannot be undone."
+        itemName={deletingItem?.name}
+        isDeleting={isDeleting}
+        onConfirm={confirmDeleteSubItem}
+        onCancel={() => setDeletingItem(null)}
+      />
     </div>
   );
 };

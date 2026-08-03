@@ -16,6 +16,19 @@ export const useHeaderCategoriesQuery = () => {
   });
 };
 
+export const useCreateCategoryMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await apiClient.post('/menu-items/categories', { name });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+    },
+  });
+};
+
 export const useUpdateCategoryMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({

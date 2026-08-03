@@ -3,13 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { HeaderCategory } from '@/components/ManageHeader/types';
 import { initialMockData } from '@/components/ManageHeader/mockData';
 import { Chevron } from '@/assets/icons';
-import { useUpdateCategoryMutation } from '@/hooks/useHeaderCategories';
+import { useUpdateCategoryMutation, useCreateCategoryMutation } from '@/hooks/useHeaderCategories';
 
 const CategoryFormPage: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
   const [name, setName] = useState('');
+  const createCategory = useCreateCategoryMutation();
   const updateCategory = useUpdateCategoryMutation();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (categoryId && categoryId !== 'new') {
@@ -24,12 +26,20 @@ const CategoryFormPage: React.FC = () => {
     }
   }, [categoryId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    if (categoryId && categoryId !== 'new') {
-      updateCategory.mutate({ categoryId, name: name.trim() });
+    setLoading(true);
+
+    try {
+      if (categoryId && categoryId !== 'new') {
+        await updateCategory.mutateAsync({ categoryId, name: name.trim() });
+      } else {
+        await createCategory.mutateAsync(name.trim());
+      }
+    } catch (err) {
+      console.error('Error saving category:', err);
     }
 
     const saved = localStorage.getItem('headerCategories');
@@ -47,6 +57,7 @@ const CategoryFormPage: React.FC = () => {
     }
 
     localStorage.setItem('headerCategories', JSON.stringify(categories));
+    setLoading(false);
     navigate('/manage-header');
   };
 
@@ -90,9 +101,10 @@ const CategoryFormPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={!name.trim()}
-              className="bg-[#FB3748] text-white px-6 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!name.trim() || loading}
+              className="bg-[#FB3748] text-white px-6 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+              {loading && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
               Save
             </button>
           </div>

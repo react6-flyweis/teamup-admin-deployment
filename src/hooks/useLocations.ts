@@ -69,3 +69,28 @@ export const useUpdateLocationMutation = () => {
     },
   });
 };
+
+export interface CreateLocationPayload {
+  name: string;
+  city: string;
+  state: string;
+  address: string;
+  phone?: string;
+  email?: string;
+  mapEmbedUrl?: string;
+}
+
+export const useCreateLocationMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateLocationPayload) => {
+      const response = await apiClient.post('/locations', payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+    },
+  });
+};
+
+

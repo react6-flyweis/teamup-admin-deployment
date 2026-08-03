@@ -32,6 +32,17 @@ const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, o
   // Bundle Cards
   const [bundleCards, setBundleCards] = useState<FeaturedEventCard[]>([]);
 
+  const iconFileRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setter(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
   useEffect(() => {
     if (initialData) {
       setName(initialData.name || '');
@@ -127,7 +138,7 @@ const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, o
               <h3 className={sectionHead}>
                 <span className="text-[#E1017D]">01</span> Navigation Setup
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className={labelCls}>Item Name (in menu)</label>
                   <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Boom Bundle" required className={inputCls} />
@@ -135,6 +146,26 @@ const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, o
                 <div>
                   <label className={labelCls}>Page URL Path</label>
                   <input type="text" value={path} onChange={e => setPath(e.target.value)} placeholder="e.g. /groups/boom-bundle" required className={inputCls} />
+                </div>
+              </div>
+              {/* Icon upload */}
+              <div>
+                <label className={labelCls}>Nav Icon (shown in header bar)</label>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    {icon ? (
+                      <div className="w-16 h-16 rounded-xl bg-[#2A2A2A] border border-[#3A3530] overflow-hidden flex items-center justify-center group relative">
+                        <img src={icon} alt="icon" className="w-full h-full object-contain p-1" onError={e => { e.currentTarget.style.display='none'; }} />
+                        <button type="button" onClick={() => setIcon('')} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"><CloseIcon /></button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => iconFileRef.current?.click()} className="w-16 h-16 rounded-xl bg-[#2A2A2A] border border-dashed border-[#3A3530] hover:border-[#E1017D] flex flex-col items-center justify-center text-gray-500 hover:text-[#E1017D] transition-colors">
+                        <UploadIcon /><span className="text-[10px] mt-1">Icon</span>
+                      </button>
+                    )}
+                    <input type="file" ref={iconFileRef} className="hidden" accept="image/*" onChange={e => handleFileChange(e, setIcon)} />
+                  </div>
+                  <input type="text" value={icon} onChange={e => setIcon(e.target.value)} placeholder="Or paste icon URL" className={`${inputCls} flex-1`} />
                 </div>
               </div>
             </section>

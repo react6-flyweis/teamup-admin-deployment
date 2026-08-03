@@ -87,7 +87,7 @@ export interface HeaderSubItem {
 
   // ─── Group Activity Page Fields ────────────────────────────
   // pageType helps differentiate rendering on the frontend
-  pageType?: 'game' | 'group-activity' | 'team-parties' | 'boom-bundle' | 'queens-night';
+  pageType?: 'game' | 'group-activity' | 'team-parties' | 'boom-bundle' | 'queens-night' | 'simple-link';
 
   // Hero
   heroBookNowLink?: string;
