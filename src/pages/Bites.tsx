@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import MenuTable from '../components/Bites/MenuTable';
 import AddEditFoodItemsModal from '../components/Bites/AddEditFoodItemsModal';
-import ComboCard from '../components/Bites/ComboCard';
-import ComboModal from '../components/Bites/ComboModal';
-import BitesHeaderBanner from '../components/Bites/BitesHeaderBanner';
+import FoodComboSection from '../components/Bites/FoodComboSection';
+import BitesHeaderBanner, { type BiteFilter } from '../components/Bites/BitesHeaderBanner';
 
 import {
   useFoodCategoriesQuery,
@@ -14,11 +13,12 @@ import {
   useDrinksQuery,
   useCreateDrinkMutation,
   useUpdateDrinkMutation,
-  useDeleteDrinkMutation,
-  useFoodDrinksContentQuery,
-  useUpdateFoodDrinksContentMutation
+  useDeleteDrinkMutation
 } from '../hooks/useBites';
-import type { FoodComboItem } from '../hooks/useBites';
+import type { DrinkCategoryEnum } from '../hooks/useBites';
+import { formatDrinkCategory, DRINK_CATEGORY_OPTIONS } from '../utils/drinkCategories';
+
+import ConfirmDeleteModal from '../components/common/ConfirmDeleteModal';
 
 export interface MenuItem {
   id: string;
@@ -36,20 +36,12 @@ export interface MenuItem {
   isAlcoholic?: boolean;
 }
 
-export interface ComboItem {
-  id?: number;
-  pizza: string;
-  bevvies: string;
-  burger: string;
-  welcomeBevvy: string;
-  shots: string;
-}
 
 const Bites = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [showComboModal, setShowComboModal] = useState(false);
-  const [selectedCombo, setSelectedCombo] = useState<ComboItem | null>(null);
+  const [activeFilter, setActiveFilter] = useState<BiteFilter>('food');
+  const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
 
   // Queries
   const { data: categories = [], isLoading: categoriesLoading } = useFoodCategoriesQuery();
@@ -64,11 +56,8 @@ const Bites = () => {
   const updateDrinkMutation = useUpdateDrinkMutation();
   const deleteDrinkMutation = useDeleteDrinkMutation();
 
-  const { data: foodDrinksContent, isLoading: contentLoading } = useFoodDrinksContentQuery();
-  const updateContentMutation = useUpdateFoodDrinksContentMutation();
-
   // Loading indicator
-  if (categoriesLoading || foodItemsLoading || drinksLoading || contentLoading) {
+  if (categoriesLoading || foodItemsLoading || drinksLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E1017D]"></div>
@@ -78,30 +67,28 @@ const Bites = () => {
 
   // Map backend items to unified UI model
   const mappedFoodItems: MenuItem[] = foodItems.map(item => {
-    const cat = categories.find(c => c._id === item.categoryId);
+    const rawCat = item.categoryId;
+    const catIdStr = typeof rawCat === 'object' && rawCat ? rawCat._id : (typeof rawCat === 'string' ? rawCat : '');
+    const catObj = typeof rawCat === 'object' && rawCat ? rawCat : categories.find(c => c._id === catIdStr);
+    const categoryName = catObj ? catObj.name : 'Food';
+
     return {
       id: item._id,
       image: item.imageUrl || '',
       name: item.name,
-      category: cat ? cat.name : 'Food',
-      subCategory: item.tags?.[0] || '---',
+      category: 'Food',
+      subCategory: categoryName,
       availability: item.isActive,
       description: item.description || '',
       kcal: item.calories || '',
       price: item.price,
       slug: item.slug,
       isDrink: false,
-      categoryId: item.categoryId
+      categoryId: catIdStr
     };
   });
 
   const mappedDrinks: MenuItem[] = drinks.map(item => {
-    const formatDrinkCategory = (cat: string) => {
-      if (!cat) return 'Drinks';
-      if (cat.toLowerCase() === 'beers') return 'Beer';
-      return cat.charAt(0).toUpperCase() + cat.slice(1);
-    };
-
     return {
       id: item._id,
       image: item.imageUrl || '',
@@ -117,21 +104,10 @@ const Bites = () => {
     };
   });
 
-  const items = [...mappedFoodItems, ...mappedDrinks];
-
-  // Map site content combos
-  const comboSectionItems = foodDrinksContent?.content?.data?.foodCombos?.items || [];
-  const combos: ComboItem[] = comboSectionItems.map((item: FoodComboItem, idx: number) => ({
-    id: item.order || (idx + 1),
-    pizza: item.pizza,
-    bevvies: item.bevvies,
-    burger: item.burger,
-    welcomeBevvy: item.welcomeBevy,
-    shots: item.shots
-  }));
+  const filteredItems = activeFilter === 'drinks' ? mappedDrinks : mappedFoodItems;
 
   const handleToggleAvailability = (id: string, availability: boolean) => {
-    const item = items.find(i => i.id === id);
+    const item = filteredItems.find(i => i.id === id);
     if (!item) return;
 
     if (item.isDrink) {
@@ -141,33 +117,64 @@ const Bites = () => {
       });
     } else {
       updateFoodItemMutation.mutate({
+        id: item.id,
         slug: item.slug,
         payload: { isActive: availability }
       });
     }
   };
 
+  const resetMutationErrors = () => {
+    createFoodItemMutation.reset();
+    updateFoodItemMutation.reset();
+    createDrinkMutation.reset();
+    updateDrinkMutation.reset();
+  };
+
   const handleEdit = (item: MenuItem) => {
+    resetMutationErrors();
     setSelectedItem(item);
     setShowModal(true);
   };
 
   const handleDelete = (item: MenuItem) => {
-    if (item.isDrink) {
-      deleteDrinkMutation.mutate(item.slug);
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!itemToDelete) return;
+    if (itemToDelete.isDrink) {
+      deleteDrinkMutation.mutate(itemToDelete.slug, {
+        onSuccess: () => setItemToDelete(null)
+      });
     } else {
-      deleteFoodItemMutation.mutate(item.slug);
+      deleteFoodItemMutation.mutate(
+        { id: itemToDelete.id, slug: itemToDelete.slug },
+        { onSuccess: () => setItemToDelete(null) }
+      );
     }
   };
 
   const handleSave = (updatedItem: Partial<MenuItem>) => {
+    resetMutationErrors();
     const isNew = !selectedItem;
     const cleanSlug = updatedItem.name
       ? updatedItem.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')
       : '';
 
+    const closeOnSuccess = {
+      onSuccess: () => {
+        setShowModal(false);
+        setSelectedItem(null);
+      }
+    };
+
     if (updatedItem.category === 'Drinks') {
-      const categorySlug = (updatedItem.subCategory || 'cocktails').toLowerCase().replace(' ', '-');
+      const selectedSub = updatedItem.subCategory || 'cocktails';
+      const matchedOpt = DRINK_CATEGORY_OPTIONS.find(
+        opt => opt.value === selectedSub || opt.label.toLowerCase() === selectedSub.toLowerCase()
+      );
+      const categorySlug = (matchedOpt ? matchedOpt.value : selectedSub) as DrinkCategoryEnum;
       const payload = {
         name: updatedItem.name || '',
         slug: isNew ? cleanSlug : selectedItem.slug,
@@ -181,16 +188,16 @@ const Bites = () => {
       };
 
       if (isNew) {
-        createDrinkMutation.mutate(payload);
+        createDrinkMutation.mutate(payload, closeOnSuccess);
       } else {
         updateDrinkMutation.mutate({
           slug: selectedItem.slug,
           payload
-        });
+        }, closeOnSuccess);
       }
     } else {
-      const categoryName = updatedItem.category || 'Food';
-      const matchedCat = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
+      const targetCatName = updatedItem.subCategory || updatedItem.category || 'Food';
+      const matchedCat = categories.find(c => c.name.toLowerCase() === targetCatName.toLowerCase()) || categories.find(c => c.name.toLowerCase() === 'food');
       const categoryId = matchedCat ? matchedCat._id : (categories[0]?._id || '');
 
       const payload = {
@@ -200,89 +207,35 @@ const Bites = () => {
         description: updatedItem.description || '',
         calories: updatedItem.kcal || '',
         price: updatedItem.price || 0,
-        tags: updatedItem.subCategory ? [updatedItem.subCategory] : [],
         imageUrl: updatedItem.image || '',
         isActive: true,
         order: 1
       };
 
       if (isNew) {
-        createFoodItemMutation.mutate(payload);
+        createFoodItemMutation.mutate(payload, closeOnSuccess);
       } else {
         updateFoodItemMutation.mutate({
+          id: selectedItem.id,
           slug: selectedItem.slug,
           payload
-        });
+        }, closeOnSuccess);
       }
     }
-
-    setShowModal(false);
-    setSelectedItem(null);
-  };
-
-  const handleEditCombo = (id: number) => {
-    const combo = combos.find(c => c.id === id);
-    if (combo) {
-      setSelectedCombo(combo);
-      setShowComboModal(true);
-    }
-  };
-
-  const handleSaveCombo = (updatedCombo: Partial<ComboItem>) => {
-    let newItems: FoodComboItem[] = [];
-
-    if (selectedCombo) {
-      newItems = comboSectionItems.map((item: FoodComboItem, idx: number) => {
-        const currentId = item.order || (idx + 1);
-        if (currentId === selectedCombo.id) {
-          return {
-            ...item,
-            pizza: updatedCombo.pizza || item.pizza,
-            bevvies: updatedCombo.bevvies || item.bevvies,
-            burger: updatedCombo.burger || item.burger,
-            welcomeBevy: updatedCombo.welcomeBevvy || item.welcomeBevy,
-            shots: updatedCombo.shots || item.shots
-          };
-        }
-        return item;
-      });
-    } else {
-      const newOrder = comboSectionItems.length + 1;
-      const newComboItem: FoodComboItem = {
-        title: `Combo ${newOrder}`,
-        subtitle: "heres what is included",
-        pizza: updatedCombo.pizza || '',
-        bevvies: updatedCombo.bevvies || '',
-        burger: updatedCombo.burger || '',
-        welcomeBevy: updatedCombo.welcomeBevvy || '',
-        shots: updatedCombo.shots || '',
-        order: newOrder,
-        isActive: true
-      };
-      newItems = [...comboSectionItems, newComboItem];
-    }
-
-    updateContentMutation.mutate({
-      data: {
-        foodCombos: {
-          title: foodDrinksContent?.content?.data?.foodCombos?.title || "Our Food Combos",
-          items: newItems
-        }
-      }
-    });
-
-    setShowComboModal(false);
-    setSelectedCombo(null);
   };
 
   const isSavingItem = createFoodItemMutation.isPending || updateFoodItemMutation.isPending || createDrinkMutation.isPending || updateDrinkMutation.isPending;
-  const isSavingCombo = updateContentMutation.isPending;
   const isProcessing = deleteFoodItemMutation.isPending || deleteDrinkMutation.isPending || (updateFoodItemMutation.isPending && !showModal) || (updateDrinkMutation.isPending && !showModal);
+
+  const itemError = createFoodItemMutation.error || updateFoodItemMutation.error || createDrinkMutation.error || updateDrinkMutation.error;
+  const saveErrorMessage = itemError
+    ? ((itemError as { response?: { data?: { message?: string } } }).response?.data?.message || itemError.message || 'Failed to save item. Please try again.')
+    : null;
 
   return (
     <div className="flex flex-col gap-8 min-h-screen">
       {/* Banner Section */}
-      <BitesHeaderBanner />
+      <BitesHeaderBanner activeFilter={activeFilter} onFilterChange={setActiveFilter} />
 
       {/* Menu Items Section */}
       <div className="flex flex-col gap-4">
@@ -290,6 +243,7 @@ const Bites = () => {
           <h1 className="text-2xl font-bold text-white">Menu Items & Pricing</h1>
           <button
             onClick={() => {
+              resetMutationErrors();
               setSelectedItem(null);
               setShowModal(true);
             }}
@@ -301,7 +255,7 @@ const Bites = () => {
 
         {/* Table Section */}
         <MenuTable
-          items={items}
+          items={filteredItems}
           onToggleAvailability={handleToggleAvailability}
           onEdit={handleEdit}
           onDelete={handleDelete}
@@ -310,56 +264,31 @@ const Bites = () => {
       </div>
 
       {/* Food Combo Section */}
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Our Food Combo</h2>
-          <button
-            onClick={() => {
-              setSelectedCombo(null);
-              setShowComboModal(true);
-            }}
-            className="bg-[#E1017D] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#c9016f] transition-colors"
-          >
-            Add A New Combo
-          </button>
-        </div>
-
-        <div className="flex gap-5 flex-wrap justify-start">
-          {combos.map(combo => (
-            <ComboCard
-              key={combo.id}
-              combo={combo}
-              onEdit={handleEditCombo}
-            />
-          ))}
-        </div>
-      </div>
+      <FoodComboSection />
 
       {/* Add/Edit Menu Item Modal */}
       {showModal && (
         <AddEditFoodItemsModal
           onClose={() => {
+            resetMutationErrors();
             setShowModal(false);
             setSelectedItem(null);
           }}
           item={selectedItem}
           onSave={handleSave}
           isSaving={isSavingItem}
+          error={saveErrorMessage}
         />
       )}
 
-      {/* Add/Edit Combo Modal */}
-      {showComboModal && (
-        <ComboModal
-          combo={selectedCombo || undefined}
-          onClose={() => {
-            setShowComboModal(false);
-            setSelectedCombo(null);
-          }}
-          onSave={handleSaveCombo}
-          isSaving={isSavingCombo}
-        />
-      )}
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!itemToDelete}
+        itemName={itemToDelete?.name}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setItemToDelete(null)}
+        isDeleting={deleteFoodItemMutation.isPending || deleteDrinkMutation.isPending}
+      />
     </div>
   );
 };
