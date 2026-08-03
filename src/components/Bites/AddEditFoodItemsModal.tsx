@@ -1,22 +1,32 @@
 import React from 'react';
 import { Dropdown } from '../common/Dropdown';
 import type { MenuItem } from '@/pages/Bites';
+import { useFoodItemByIdQuery, useFoodCategoriesQuery } from '@/hooks/useBites';
+import { DRINK_CATEGORY_OPTIONS, formatDrinkCategory } from '@/utils/drinkCategories';
 
 interface AddEditModalProps {
   onClose: () => void;
   item?: MenuItem | null;
   onSave: (item: Partial<MenuItem>) => void;
   isSaving?: boolean;
+  error?: string | null;
 }
 
 const AddEditFoodItemsModal: React.FC<AddEditModalProps> = ({
   onClose,
   item,
   onSave,
-  isSaving = false
+  isSaving = false,
+  error = null
 }) => {
-  const [category, setCategory] = React.useState(item?.isDrink ? 'Drinks' : (item?.category || ''));
-  const [subCategory, setSubCategory] = React.useState(item?.subCategory || '');
+  const initialCategory = item?.isDrink ? 'Drinks' : 'Food';
+  const rawSubCategory = item?.subCategory && item.subCategory !== '---'
+    ? item.subCategory
+    : (item?.category && item.category !== 'Food' && item.category !== 'Drinks' ? item.category : '');
+  const initialSubCategory = item?.isDrink ? formatDrinkCategory(rawSubCategory) : rawSubCategory;
+
+  const [category, setCategory] = React.useState(initialCategory);
+  const [subCategory, setSubCategory] = React.useState(initialSubCategory);
   const [name, setName] = React.useState(item?.name || '');
   const [kcal, setKcal] = React.useState(item?.kcal || '');
   const [description, setDescription] = React.useState(item?.description || '');
@@ -24,19 +34,62 @@ const AddEditFoodItemsModal: React.FC<AddEditModalProps> = ({
   const [price, setPrice] = React.useState(item?.price !== undefined ? String(item.price) : '');
   const [isAlcoholic, setIsAlcoholic] = React.useState(item?.isAlcoholic || false);
 
-  const categories = ['Food', 'Drinks', 'Food Combos'];
-  const subCategories = 
-    category === 'Food Combos' || category === 'Food'
-      ? ['Burger', 'Pizza', 'Pasta', 'On The Side']
+  // Fetch food categories dynamically from API
+  const { data: foodCategories = [] } = useFoodCategoriesQuery();
+
+  // Fetch detailed item data for editing via GET /api/menu/items/:foodItemId
+  const foodItemId = item && !item.isDrink ? item.id : null;
+  const { data: detailedItem, isLoading: isFetchingDetails } = useFoodItemByIdQuery(foodItemId);
+
+  React.useEffect(() => {
+    if (detailedItem) {
+      if (detailedItem.name) setName(detailedItem.name);
+      if (detailedItem.price !== undefined) setPrice(String(detailedItem.price));
+      if (detailedItem.calories !== undefined) setKcal(detailedItem.calories);
+      if (detailedItem.description !== undefined) setDescription(detailedItem.description);
+      if (detailedItem.imageUrl !== undefined) setImage(detailedItem.imageUrl);
+
+      if (detailedItem.categoryId) {
+        const catName = typeof detailedItem.categoryId === 'object' ? detailedItem.categoryId.name : '';
+        if (catName && catName !== 'Drinks') {
+          setCategory('Food');
+          setSubCategory(prev => (!prev || prev === '---' ? catName : prev));
+        }
+      }
+    }
+  }, [detailedItem]);
+
+  const categories = ['Food', 'Drinks'];
+
+  const dynamicFoodSubCategories = React.useMemo(() => {
+    return foodCategories
+      .filter(c => c.slug !== 'food-combos')
+      .map(c => c.name);
+  }, [foodCategories]);
+
+  const subCategories =
+    category === 'Food'
+      ? dynamicFoodSubCategories
       : category === 'Drinks'
-      ? ['Cocktails', 'Beers', 'Draught', 'Mocktails', 'Soft-drinks', 'Shots', 'Wine', 'Other']
-      : [];
+        ? DRINK_CATEGORY_OPTIONS.map(opt => opt.label)
+        : [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    let finalSubCategory = subCategory;
+    if (category === 'Drinks') {
+      const matchedOpt = DRINK_CATEGORY_OPTIONS.find(
+        opt => opt.label.toLowerCase() === subCategory.toLowerCase() || opt.value === subCategory
+      );
+      if (matchedOpt) {
+        finalSubCategory = matchedOpt.value;
+      }
+    }
+
     onSave({
       category,
-      subCategory,
+      subCategory: finalSubCategory,
       name,
       kcal,
       description,
@@ -54,23 +107,40 @@ const AddEditFoodItemsModal: React.FC<AddEditModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={handleBackdropClick}>
-      <div className="bg-[#F9D2EA] rounded-2xl p-6 w-[683px]">
+      <div className="bg-[#F9D2EA] rounded-2xl p-6 w-[683px] max-h-[90vh] overflow-y-auto relative">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-black">
-            {item ? (item.isDrink ? 'Edit Drink Item' : 'Edit Food Item') : 'Add New Item'}
-          </h2>
-          <button 
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-black">
+              {item ? (item.isDrink ? 'Edit Drink Item' : 'Edit Food Item') : 'Add New Item'}
+            </h2>
+            {isFetchingDetails && (
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#E1017D] bg-white/60 px-3 py-1 rounded-full border border-[#E1017D]/30 animate-pulse">
+                <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-b-2 border-[#E1017D]"></div>
+                Loading details...
+              </div>
+            )}
+          </div>
+          <button
             onClick={onClose}
             disabled={isSaving}
             className="w-6 h-6 bg-white rounded-full flex items-center justify-center disabled:opacity-50"
           >
             <svg width="20" height="20" viewBox="0 0 20 20">
-              <path d="M15 5L5 15M5 5L15 15" stroke="#000" strokeWidth="1.5"/>
+              <path d="M15 5L5 15M5 5L15 15" stroke="#000" strokeWidth="1.5" />
             </svg>
           </button>
         </div>
         <hr className="border-black mb-6" />
-        
+
+        {error && (
+          <div className="mb-6 p-3.5 bg-[#FFEBEE] border border-[#FFCDD2] text-[#B71C1C] rounded-lg text-sm flex items-center gap-2.5 shadow-sm">
+            <svg className="w-5 h-5 flex-shrink-0 fill-current" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span className="font-medium">{error}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Category and Sub-category row */}
           <div className="grid grid-cols-2 gap-5">
@@ -86,16 +156,16 @@ const AddEditFoodItemsModal: React.FC<AddEditModalProps> = ({
                 placeholder="Select Category"
               />
             </div>
-            {(category === 'Food Combos' || category === 'Food' || category === 'Drinks') && (
+            {(category === 'Food' || category === 'Drinks') && (
               <div>
                 <label className="block text-sm font-medium text-black mb-1">
-                  {category === 'Drinks' ? 'Drink Category' : 'Sub-category'}
+                  {category === 'Drinks' ? 'Drink Category' : 'Category Detail'}
                 </label>
                 <Dropdown
                   options={subCategories}
                   value={subCategory}
                   onChange={setSubCategory}
-                  placeholder={category === 'Drinks' ? 'Select Drink Category' : 'Select Sub-category'}
+                  placeholder={category === 'Drinks' ? 'Select Drink Category' : 'Select Category Detail'}
                 />
               </div>
             )}
