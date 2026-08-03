@@ -14,7 +14,7 @@ export interface FoodCategory {
 
 export interface FoodItem {
   _id: string;
-  categoryId: string;
+  categoryId: string | FoodCategory;
   name: string;
   slug: string;
   description?: string;
@@ -28,11 +28,21 @@ export interface FoodItem {
   updatedAt?: string;
 }
 
+export type DrinkCategoryEnum =
+  | 'cocktails'
+  | 'beers'
+  | 'draught'
+  | 'mocktails'
+  | 'soft-drinks'
+  | 'shots'
+  | 'wine'
+  | 'other';
+
 export interface Drink {
   _id: string;
   name: string;
   slug: string;
-  category: string; // cocktails, beers, draught, mocktails, soft-drinks, shots, wine, other
+  category: DrinkCategoryEnum;
   description?: string;
   price: number;
   isAlcoholic: boolean;
@@ -74,7 +84,7 @@ export const useFoodCategoriesQuery = () => {
   return useQuery<FoodCategory[]>({
     queryKey: ['food-categories'],
     queryFn: async () => {
-      const response = await apiClient.get('/menu/categories?includeInactive=true');
+      const response = await apiClient.get('/menu/categories?search=&sortBy=order&sortOrder=asc');
       return Array.isArray(response.data) ? response.data : (response.data.categories || response.data.data || []);
     },
   });
@@ -93,6 +103,32 @@ export const useCreateFoodCategoryMutation = () => {
   });
 };
 
+export interface DetailedFoodCategory {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl?: string;
+  isActive?: boolean;
+  order?: number;
+}
+
+export interface DetailedFoodItem {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  calories?: string;
+  price: number;
+  tags?: string[];
+  imageUrl?: string;
+  order?: number;
+  isActive: boolean;
+  categoryId?: string | DetailedFoodCategory;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // 2. Food Items Hooks
 export const useFoodItemsQuery = () => {
   return useQuery<FoodItem[]>({
@@ -101,6 +137,18 @@ export const useFoodItemsQuery = () => {
       const response = await apiClient.get('/menu/items?includeInactive=true');
       return Array.isArray(response.data) ? response.data : (response.data.items || response.data.menuItems || response.data.data || []);
     },
+  });
+};
+
+export const useFoodItemByIdQuery = (idOrSlug: string | null) => {
+  return useQuery<DetailedFoodItem>({
+    queryKey: ['food-item', idOrSlug],
+    queryFn: async () => {
+      if (!idOrSlug) throw new Error('No food item ID provided');
+      const response = await apiClient.get(`/menu/items/${idOrSlug}`);
+      return response.data?.item || response.data;
+    },
+    enabled: !!idOrSlug,
   });
 };
 
@@ -120,12 +168,18 @@ export const useCreateFoodItemMutation = () => {
 export const useUpdateFoodItemMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ slug, payload }: { slug: string; payload: Partial<FoodItem> }) => {
-      const response = await apiClient.patch(`/menu/items/${slug}`, payload);
+    mutationFn: async ({ id, slug, payload }: { id?: string; slug?: string; payload: Partial<FoodItem> }) => {
+      const target = id || slug;
+      if (!target) throw new Error('No food item ID or slug provided');
+      const response = await apiClient.patch(`/menu/items/${target}`, payload);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['food-items'] });
+      const target = variables.id || variables.slug;
+      if (target) {
+        queryClient.invalidateQueries({ queryKey: ['food-item', target] });
+      }
     },
   });
 };
@@ -133,8 +187,10 @@ export const useUpdateFoodItemMutation = () => {
 export const useDeleteFoodItemMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (slug: string) => {
-      const response = await apiClient.delete(`/menu/items/${slug}`);
+    mutationFn: async (target: string | { id?: string; slug?: string }) => {
+      const targetId = typeof target === 'string' ? target : (target.id || target.slug);
+      if (!targetId) throw new Error('No food item ID or slug provided for deletion');
+      const response = await apiClient.delete(`/menu/items/${targetId}`);
       return response.data;
     },
     onSuccess: () => {
@@ -220,3 +276,110 @@ export const useUpdateFoodDrinksContentMutation = () => {
     },
   });
 };
+
+// 5. Dedicated Food Combos Hooks (/food-combos)
+export interface FoodCombo {
+  _id: string;
+  id?: string;
+  title?: string;
+  subtitle?: string;
+  pizza?: string;
+  bevvies?: string;
+  burger?: string;
+  welcomeBevy?: string;
+  welcomeBevvy?: string;
+  shots?: string;
+  order?: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const useFoodCombosQuery = (search?: string, sortBy: string = 'order', sortOrder: 'asc' | 'desc' = 'asc') => {
+  return useQuery<FoodCombo[]>({
+    queryKey: ['food-combos', search, sortBy, sortOrder],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (sortBy) params.append('sortBy', sortBy);
+      if (sortOrder) params.append('sortOrder', sortOrder);
+
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const response = await apiClient.get(`/food-combos${queryString}`);
+      const data = response.data;
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data.combos)) return data.combos;
+      if (Array.isArray(data.foodCombos)) return data.foodCombos;
+      if (Array.isArray(data.data)) return data.data;
+      return [];
+    },
+  });
+};
+
+export const useFoodComboByIdQuery = (id: string | null) => {
+  return useQuery<FoodCombo>({
+    queryKey: ['food-combo', id],
+    queryFn: async () => {
+      if (!id) throw new Error('No food combo ID provided');
+      const response = await apiClient.get(`/food-combos/${id}`);
+      return response.data?.combo || response.data?.foodCombo || response.data?.data || response.data;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useCreateFoodComboMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Partial<FoodCombo>) => {
+      const response = await apiClient.post('/food-combos', payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['food-combos'] });
+    },
+  });
+};
+
+export const useUpdateFoodComboMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: Partial<FoodCombo> }) => {
+      const response = await apiClient.patch(`/food-combos/${id}`, payload);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['food-combos'] });
+      if (variables.id) {
+        queryClient.invalidateQueries({ queryKey: ['food-combo', variables.id] });
+      }
+    },
+  });
+};
+
+export const useReorderFoodCombosMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (combos: { id: string; order: number }[]) => {
+      const response = await apiClient.patch('/food-combos/reorder', { combos });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['food-combos'] });
+    },
+  });
+};
+
+export const useDeleteFoodComboMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.delete(`/food-combos/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['food-combos'] });
+    },
+  });
+};
+
