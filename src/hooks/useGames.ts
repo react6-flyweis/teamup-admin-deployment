@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/utils/apiClient';
 
 export interface GamePackage {
@@ -14,17 +14,30 @@ export interface Game {
   name: string;
   slug: string;
   description: string;
-  category: string;
-  imageUrl: string;
-  media: string[];
-  features: string[];
-  packages: GamePackage[];
-  duration: string;
-  priceFrom: number;
-  tags: string[];
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  category?: string;
+  headline?: string;
+  peopleAllowedPerLane?: number;
+  totalLanes?: number;
+  timeOption?: string;
+  minimumAgeRequirement?: string;
+  idRequired?: boolean;
+  wheelchairAccessible?: boolean;
+  gameIconUrl?: string;
+  cardImageUrl?: string;
+  bannerImageUrl?: string;
+  imageUrl?: string;
+  media?: string[];
+  features?: string[];
+  packages?: GamePackage[];
+  duration?: string;
+  priceFrom?: number;
+  pricePerPerson?: number;
+  tags?: string[];
+  isActive?: boolean;
+  __v?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  gameName?: string;
 }
 
 export interface GamesResponse {
@@ -37,6 +50,23 @@ export interface GamesResponse {
   };
 }
 
+export interface CreateGamePayload {
+  gameName: string;
+  peopleAllowedPerLane: number;
+  totalLanes: number;
+  timeOption: string;
+  pricePerPerson: number;
+  minimumAgeRequirement: string;
+  idRequired: boolean;
+  wheelchairAccessible: boolean;
+  gameIconUrl?: string;
+  cardImageUrl?: string;
+  bannerImageUrl?: string;
+  headline?: string;
+  description?: string;
+  isActive?: boolean;
+}
+
 export const useGamesQuery = () => {
   return useQuery<GamesResponse>({
     queryKey: ['games'],
@@ -44,5 +74,51 @@ export const useGamesQuery = () => {
       const response = await apiClient.get('/games');
       return response.data;
     },
+  });
+};
+
+export const useCreateGameMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateGamePayload) => {
+      const response = await apiClient.post('/games', payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+    },
+  });
+};
+
+export interface UpdateGamePayload {
+  gameIdOrSlug: string;
+  payload: Partial<CreateGamePayload>;
+}
+
+export const useUpdateGameMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ gameIdOrSlug, payload }: UpdateGamePayload) => {
+      const response = await apiClient.patch(`/games/${gameIdOrSlug}`, payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+    },
+  });
+};
+export interface SingleGameResponse {
+  game: Game;
+}
+
+export const useSingleGameQuery = (gameIdOrSlug?: string) => {
+  return useQuery<SingleGameResponse>({
+    queryKey: ['game', gameIdOrSlug],
+    queryFn: async () => {
+      if (!gameIdOrSlug) throw new Error("gameIdOrSlug is required");
+      const response = await apiClient.get(`/games/${gameIdOrSlug}`);
+      return response.data;
+    },
+    enabled: !!gameIdOrSlug,
   });
 };
