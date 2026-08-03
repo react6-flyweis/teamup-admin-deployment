@@ -3,7 +3,9 @@ import type { HeaderSubItem } from './types';
 import { EditIcon, TrashIcon } from '@/assets/icons';
 import { useNavigate } from 'react-router-dom';
 import Toggle from '@/components/common/Toggle';
-import { useUpdateMenuItemStatusMutation } from '@/hooks/useHeaderCategories';
+import { useUpdateMenuItemMutation } from '@/hooks/useHeaderCategories';
+import { deleteMenuItem, deleteGroupActivity, deleteTeamParty, deleteBoomBundle, deleteQueensNight } from '@/hooks/useHeaderSubItems';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SubItemListProps {
   subItems: HeaderSubItem[];
@@ -15,7 +17,8 @@ interface SubItemListProps {
 
 const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categoryId, availableGames, onUpdate }) => {
   const navigate = useNavigate();
-  const updateMenuItemStatus = useUpdateMenuItemStatusMutation();
+  const queryClient = useQueryClient();
+  const updateMenuItemMutation = useUpdateMenuItemMutation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -35,20 +38,34 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
 
     // Optimistically update parent state
     onUpdate(subItems.map(item => 
-      item.id === id ? { ...item, isHidden: !item.isHidden } : item
+      item.id === id ? { ...item, isHidden: !item.isHidden, isActive: newIsActive } : item
     ));
 
     // Send status update API request: PATCH /api/menu-items/:menuItemId
-    updateMenuItemStatus.mutate({ menuItemId: id, isActive: newIsActive });
+    updateMenuItemMutation.mutate({ menuItemId: id, payload: { isActive: newIsActive } });
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this sub-item?')) {
-      onUpdate(subItems.filter(item => item.id !== id));
+  const handleDelete = async (item: HeaderSubItem) => {
+    if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
+      // Optimistically update parent state
+      onUpdate(subItems.filter(i => i.id !== item.id));
+
+      try {
+        await deleteMenuItem(item.id);
+        const type = item.type || item.pageType;
+        if (item.linkedItemId) {
+          if (type === 'group-activity') await deleteGroupActivity(item.linkedItemId).catch(() => {});
+          else if (type === 'team-parties') await deleteTeamParty(item.linkedItemId).catch(() => {});
+          else if (type === 'boom-bundle') await deleteBoomBundle(item.linkedItemId).catch(() => {});
+          else if (type === 'queens-night') await deleteQueensNight(item.linkedItemId).catch(() => {});
+        }
+      } catch (err) {
+        console.error('Error deleting menu item or entity:', err);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
     }
   };
-
-
 
   return (
     <div className="pl-8 py-2">
@@ -88,55 +105,55 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
         <p className="text-sm text-gray-500 italic">No sub-items added yet.</p>
       ) : (
         <div className="grid gap-2">
-          {subItems.map((item) => (
-            <div key={item.id} className="flex items-center justify-between p-3 bg-[#2A2A2A] rounded-lg border border-[#3A3530]">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="w-8 h-8 bg-[#1C1C1C] rounded flex items-center justify-center text-gray-400">
-                  {/* Just showing text or initials if no image is available, can be updated later to show actual icons */}
-                  {item.icon ? (
-                    <img src={item.icon.startsWith('http') || item.icon.startsWith('/') || item.icon.startsWith('data:') ? item.icon : `https://ui-avatars.com/api/?name=${item.name}&background=random`} alt={item.name} className="w-full h-full object-cover rounded" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                  ) : (
-                    <span className="text-xs">{item.name.substring(0, 2)}</span>
-                  )}
+          {subItems.map((item) => {
+            const pageType = item.type || item.pageType || 'game';
+            return (
+              <div key={item.id} className="flex items-center justify-between p-3 bg-[#2A2A2A] rounded-lg border border-[#3A3530]">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-8 h-8 bg-[#1C1C1C] rounded flex items-center justify-center text-gray-400">
+                    {item.icon ? (
+                      <img src={item.icon.startsWith('http') || item.icon.startsWith('/') || item.icon.startsWith('data:') ? item.icon : `https://ui-avatars.com/api/?name=${item.name}&background=random`} alt={item.name} className="w-full h-full object-cover rounded" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    ) : (
+                      <span className="text-xs">{item.name.substring(0, 2)}</span>
+                    )}
+                  </div>
+                  <div>
+                    <h5 className={`text-sm font-medium ${item.isHidden ? 'text-gray-500 line-through' : 'text-white'}`}>
+                      {item.name}
+                    </h5>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {item.slug ? (item.slug.startsWith('/') ? item.slug : `/${item.slug}`) : (item.path ? (item.path.startsWith('/') ? item.path : `/${item.path}`) : '')}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h5 className={`text-sm font-medium ${item.isHidden ? 'text-gray-500 line-through' : 'text-white'}`}>
-                    {item.name}
-                  </h5>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {item.slug ? (item.slug.startsWith('/') ? item.slug : `/${item.slug}`) : (item.path.startsWith('/') ? item.path : `/${item.path}`)}
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-3">
-                <div title={item.isHidden ? "Show Item" : "Hide Item"}>
-                  <Toggle 
-                    checked={!item.isHidden}
-                    onChange={() => toggleVisibility(item.id)}
-                    activeColor="#10A200"
-                    inactiveColor="#EC221F"
-                  />
+                <div className="flex items-center gap-3">
+                  <div title={item.isHidden ? "Show Item" : "Hide Item"}>
+                    <Toggle 
+                      checked={!item.isHidden}
+                      onChange={() => toggleVisibility(item.id)}
+                      activeColor="#10A200"
+                      inactiveColor="#EC221F"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => navigate(`/manage-header/${categoryId}/${pageType}/${item.id}`)}
+                    className="text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    <EditIcon size={18} color="currentColor" />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(item)}
+                    className="text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    <TrashIcon size={18} color="currentColor" />
+                  </button>
                 </div>
-                <button 
-                  onClick={() => navigate(`/manage-header/${categoryId}/${item.pageType || 'game'}/${item.id}`)}
-                  className="text-blue-400 hover:text-blue-300 transition-colors"
-                >
-                  <EditIcon size={18} color="currentColor" />
-                </button>
-                <button 
-                  onClick={() => handleDelete(item.id)}
-                  className="text-red-400 hover:text-red-300 transition-colors"
-                >
-                  <TrashIcon size={18} color="currentColor" />
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
-
-
     </div>
   );
 };
