@@ -1,55 +1,216 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import type { HeaderCategory, HeaderSubItem } from '@/components/ManageHeader/types';
 import { initialMockData } from '@/components/ManageHeader/mockData';
 import { Chevron } from '@/assets/icons';
 import TeamPartiesForm from './forms/TeamPartiesForm';
+import { useHeaderCategoriesQuery, useMenuItemQuery } from '@/hooks/useHeaderCategories';
+import { useGamesQuery } from '@/hooks/useGames';
+import {
+  fetchTeamParty,
+  createTeamParty,
+  updateTeamParty,
+  createMenuItem,
+  updateMenuItem,
+  extractId,
+  type TeamPartyPayload,
+} from '@/hooks/useHeaderSubItems';
 
 const TeamPartiesFormPage: React.FC = () => {
   const { categoryId, subItemId } = useParams<{ categoryId: string; subItemId: string }>();
   const navigate = useNavigate();
-  
+  const queryClient = useQueryClient();
+
+  const { data: categoriesData } = useHeaderCategoriesQuery();
+  const { data: gamesData } = useGamesQuery();
+  const { data: menuItemResponse, isLoading: isMenuItemLoading } = useMenuItemQuery(subItemId);
+
   const [initialData, setInitialData] = useState<HeaderSubItem | null>(null);
   const [availableGames, setAvailableGames] = useState<HeaderSubItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Convert gamesData from API to HeaderSubItem list for available games selector
   useEffect(() => {
-    const saved = localStorage.getItem('headerCategories');
-    const categories: HeaderCategory[] = saved ? JSON.parse(saved) : initialMockData;
-    const category = categories.find(c => c.id === categoryId);
-    
-    const gamesCategory = categories.find(c => c.name.toLowerCase().includes('choose game'));
-    if (gamesCategory) {
-      setAvailableGames(gamesCategory.subItems);
-    }
-
-    if (subItemId && subItemId !== 'new') {
-      const subItem = category?.subItems.find(s => s.id === subItemId);
-      if (subItem) {
-        setInitialData(subItem);
+    if (gamesData?.games) {
+      const formattedGames: HeaderSubItem[] = gamesData.games.map((g: any) => ({
+        id: g._id || g.id,
+        name: g.name || g.gameName || '',
+        path: `/games/${g.slug || ''}`,
+        icon: g.gameIconUrl || g.imageUrl || '',
+        slug: g.slug || '',
+      }));
+      setAvailableGames(formattedGames);
+    } else {
+      const saved = localStorage.getItem('headerCategories');
+      const categories: HeaderCategory[] = saved ? JSON.parse(saved) : (categoriesData?.categories || initialMockData);
+      const gamesCategory = categories.find(c => c.name.toLowerCase().includes('choose game'));
+      if (gamesCategory) {
+        setAvailableGames(gamesCategory.subItems);
       }
     }
-    setLoading(false);
-  }, [categoryId, subItemId]);
+  }, [gamesData, categoriesData]);
 
-  const handleSave = (subItemData: Partial<HeaderSubItem>) => {
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (isMenuItemLoading) return;
+
+      if (subItemId && subItemId !== 'new') {
+        let menuItem = menuItemResponse?.menuItem;
+        const linkedId = menuItem?.linkedItemId || subItemId;
+        let realData: any = null;
+
+        if (linkedId) {
+          try {
+            const res = await fetchTeamParty(linkedId);
+            realData = res?.teamParty || res?.data || res;
+          } catch (err) {
+            console.warn('Could not fetch team party from API:', err);
+          }
+        }
+
+        if (realData || menuItem) {
+          const combined: HeaderSubItem = {
+            id: menuItem?._id || subItemId,
+            linkedItemId: realData?._id || menuItem?.linkedItemId || subItemId,
+            name: menuItem?.title || realData?.name || '',
+            path: menuItem?.linkUrl || realData?.path || '',
+            icon: realData?.icon || menuItem?.iconUrl || '',
+            pageType: 'team-parties',
+            pageHeadline: realData?.pageHeadline || '',
+            pageHeroImage: realData?.pageHeroImage || '',
+            heroBookNowLink: realData?.heroBookNowLink || '',
+            sectionHeadline: realData?.sectionHeadline || '',
+            sectionDescription: realData?.sectionDescription || '',
+            checklistItems: realData?.checklistItems || [],
+            eventsDateHeading: realData?.eventsDateHeading || '',
+            featuredEvents: realData?.featuredEvents || [],
+            chooseGamesHeading: realData?.chooseGamesHeading || '',
+            chooseGameIds: realData?.chooseGameIds || [],
+            isActive: realData?.isActive ?? menuItem?.isActive ?? true,
+            isHidden: !(realData?.isActive ?? menuItem?.isActive ?? true),
+          };
+
+          if (isMounted) {
+            setInitialData(combined);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Fallback to local storage
+        const saved = localStorage.getItem('headerCategories');
+        const categories: HeaderCategory[] = saved ? JSON.parse(saved) : (categoriesData?.categories || initialMockData);
+        const category = categories.find(c => c.id === categoryId);
+        const subItem = category?.subItems.find(s => s.id === subItemId);
+        if (subItem && isMounted) {
+          setInitialData(subItem);
+        }
+      }
+
+      if (isMounted) setLoading(false);
+    };
+
+    loadData();
+    return () => { isMounted = false; };
+  }, [subItemId, categoryId, menuItemResponse, isMenuItemLoading, categoriesData]);
+
+  const handleSave = async (subItemData: Partial<HeaderSubItem>) => {
+    setLoading(true);
+
+    const pagePayload: TeamPartyPayload = {
+      name: subItemData.name || '',
+      path: subItemData.path || '',
+      icon: subItemData.icon || '',
+      pageHeadline: subItemData.pageHeadline || '',
+      pageHeroImage: subItemData.pageHeroImage || '',
+      heroBookNowLink: subItemData.heroBookNowLink || '',
+      sectionHeadline: subItemData.sectionHeadline || '',
+      sectionDescription: subItemData.sectionDescription || '',
+      checklistItems: subItemData.checklistItems || [],
+      eventsDateHeading: subItemData.eventsDateHeading || '',
+      featuredEvents: subItemData.featuredEvents || [],
+      chooseGamesHeading: subItemData.chooseGamesHeading || '',
+      chooseGameIds: subItemData.chooseGameIds || [],
+      isActive: subItemData.isActive ?? true,
+    };
+
+    let targetLinkedItemId = initialData?.linkedItemId;
+
+    try {
+      if (subItemId && subItemId !== 'new' && targetLinkedItemId) {
+        // 1. Update Team Party real entity
+        await updateTeamParty(targetLinkedItemId, pagePayload);
+
+        // 2. Update Menu Item (including all navigation setup fields)
+        await updateMenuItem(subItemId, {
+          title: subItemData.name || '',
+          name: subItemData.name || '',
+          section: categoryId || 'team-parties',
+          sectionLabel: 'Team Parties',
+          linkUrl: subItemData.path || '',
+          path: subItemData.path || '',
+          icon: subItemData.icon || '',
+          iconUrl: subItemData.icon || '',
+          type: 'team-parties',
+          linkedItemId: targetLinkedItemId,
+          isActive: subItemData.isActive ?? true,
+        });
+      } else {
+        // 1. Create Team Party real entity
+        const res = await createTeamParty(pagePayload);
+        targetLinkedItemId = extractId(res);
+
+        // 2. Create Menu Item linked to created page (including all navigation setup fields)
+        await createMenuItem({
+          title: subItemData.name || '',
+          name: subItemData.name || '',
+          section: categoryId || 'team-parties',
+          sectionLabel: 'Team Parties',
+          linkUrl: subItemData.path || '',
+          path: subItemData.path || '',
+          icon: subItemData.icon || '',
+          iconUrl: subItemData.icon || '',
+          type: 'team-parties',
+          linkedItemId: targetLinkedItemId,
+          order: 1,
+          isActive: subItemData.isActive ?? true,
+        });
+      }
+    } catch (error) {
+      console.error('Error saving Team Parties API:', error);
+    }
+
+    // Update local storage fallback
     const saved = localStorage.getItem('headerCategories');
     let categories: HeaderCategory[] = saved ? JSON.parse(saved) : initialMockData;
-
     categories = categories.map(category => {
       if (category.id === categoryId) {
         let newSubItems = [...category.subItems];
         if (subItemId && subItemId !== 'new') {
-          newSubItems = newSubItems.map(item => item.id === subItemId ? { ...item, ...subItemData, pageType: 'team-parties' } as HeaderSubItem : item);
+          newSubItems = newSubItems.map(item =>
+            item.id === subItemId ? { ...item, ...subItemData, linkedItemId: targetLinkedItemId, pageType: 'team-parties' } as HeaderSubItem : item
+          );
         } else {
-          newSubItems.push({ ...subItemData, id: Date.now().toString(), isHidden: false, pageType: 'team-parties' } as HeaderSubItem);
+          newSubItems.push({
+            ...subItemData,
+            id: Date.now().toString(),
+            linkedItemId: targetLinkedItemId,
+            isHidden: false,
+            pageType: 'team-parties'
+          } as HeaderSubItem);
         }
         return { ...category, subItems: newSubItems };
       }
       return category;
     });
-
     localStorage.setItem('headerCategories', JSON.stringify(categories));
+
+    await queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+    await queryClient.invalidateQueries({ queryKey: ['menu-item'] });
+
     navigate('/manage-header');
   };
 
@@ -57,7 +218,14 @@ const TeamPartiesFormPage: React.FC = () => {
     navigate('/manage-header');
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="p-6 text-white min-h-screen flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#E1017D] border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-400 text-sm animate-pulse">Loading Team Parties details...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 text-white min-h-screen">
