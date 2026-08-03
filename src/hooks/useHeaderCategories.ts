@@ -33,17 +33,38 @@ export const useUpdateCategoryMutation = () => {
   });
 };
 
-export const useUpdateMenuItemStatusMutation = () => {
+export const useUpdateMenuItemMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ menuItemId, isActive }: { menuItemId: string; isActive: boolean }) => {
-      const response = await apiClient.patch(`/menu-items/${menuItemId}`, { isActive });
+    mutationFn: async ({
+      menuItemId,
+      payload,
+    }: {
+      menuItemId: string;
+      payload: Record<string, unknown>;
+    }) => {
+      const response = await apiClient.patch(`/menu-items/${menuItemId}`, payload);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-item'] });
     },
   });
 };
+
+
+export const useMenuItemQuery = (menuItemId?: string) => {
+  return useQuery({
+    queryKey: ['menu-item', menuItemId],
+    queryFn: async () => {
+      if (!menuItemId) return null;
+      const response = await apiClient.get(`/menu-items/${menuItemId}`);
+      return response.data;
+    },
+    enabled: !!menuItemId && menuItemId !== 'new',
+  });
+};
+
 
 
