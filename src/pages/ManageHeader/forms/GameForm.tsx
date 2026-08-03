@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { HeaderSubItem, OtherGameCard, ChecklistItem, ChooseGameCard } from '@/components/ManageHeader/types';
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 import { useGamesQuery } from '@/hooks/useGames';
@@ -8,11 +9,15 @@ interface GameFormProps {
   onClose: () => void;
   onSave: (subItem: Partial<HeaderSubItem>) => void;
   initialData: HeaderSubItem | null;
+  subItemId?: string;
 }
 
-const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => {
+const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subItemId }) => {
+  const queryClient = useQueryClient();
   const { data: gamesData, isLoading: isGamesLoading } = useGamesQuery();
-  const availableGames = gamesData?.games || [];
+
+  const availableGames = useMemo(() => gamesData?.games || [], [gamesData?.games]);
+
 
   // ─── Link Mode (Pre-existing vs Add New) ────────────────────
   const [linkMode, setLinkMode] = useState<'existing' | 'new'>('new');
@@ -40,6 +45,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
   const [price, setPrice] = useState('');
   const [minAge, setMinAge] = useState('');
   const [wheelchairAccess, setWheelchairAccess] = useState(false);
+  const [tagsInput, setTagsInput] = useState('family, indoor, featured');
   const [otherGames, setOtherGames] = useState<OtherGameCard[]>([]);
 
   // ─── Group Activity fields ─────────────────────────────────
@@ -85,21 +91,62 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
       setChooseGamesHeading(initialData.chooseGamesHeading || '');
       setChooseGameCards(initialData.chooseGameCards || []);
 
-      if (initialData.linkedItemId) {
+      const targetGameId = initialData.linkedItemId;
+      if (targetGameId) {
         setLinkMode('existing');
-        setSelectedGameId(initialData.linkedItemId);
+        setSelectedGameId(targetGameId);
+        const linkedGame = availableGames.find(g => g._id === targetGameId);
+        if (linkedGame) {
+          // Navigation Display Name remains from initialData (menu item title)
+          setName(initialData.name || linkedGame.name);
+          setPath(initialData.path || `/games/${linkedGame.slug}`);
+          // Hero Headline / Game Name explicitly comes from linkedGame.name (game API)
+          setPageHeadline(linkedGame.name);
+          setCardDescription(linkedGame.description || initialData.cardDescription || '');
+          setPageHeroImage(linkedGame.imageUrl || initialData.pageHeroImage || '');
+          setPrice(initialData.pageDetails?.price || (linkedGame.priceFrom ? String(linkedGame.priceFrom) : ''));
+          setTimeMin(initialData.pageDetails?.timeMin || linkedGame.duration || '');
+          if (linkedGame.tags && linkedGame.tags.length > 0) {
+            setTagsInput(linkedGame.tags.join(', '));
+          }
+        }
+      } else if (availableGames.length > 0) {
+        // Try matching slug or ID with availableGames to preselect pre-existing game
+        const currentSlug = (initialData.slug || initialData.path || '').replace(/^\//, '').toLowerCase();
+        const matchedGame = availableGames.find(g => 
+          g._id === initialData.id || 
+          g.slug.toLowerCase() === currentSlug ||
+          g.name.toLowerCase() === (initialData.name || '').toLowerCase()
+        );
+
+        if (matchedGame) {
+          setLinkMode('existing');
+          setSelectedGameId(matchedGame._id);
+          setPageHeadline(matchedGame.name);
+          setCardDescription(matchedGame.description || initialData.cardDescription || '');
+          setPageHeroImage(matchedGame.imageUrl || initialData.pageHeroImage || '');
+          setPrice(matchedGame.priceFrom ? String(matchedGame.priceFrom) : '');
+          setTimeMin(matchedGame.duration || '');
+          if (matchedGame.tags && matchedGame.tags.length > 0) {
+            setTagsInput(matchedGame.tags.join(', '));
+          }
+        }
       }
     }
-  }, [initialData]);
+  }, [initialData, availableGames]);
+
+
 
   // Handle selecting an existing game from dropdown
   const handleSelectGame = (gameId: string) => {
     setSelectedGameId(gameId);
     const foundGame = availableGames.find(g => g._id === gameId);
     if (foundGame) {
-      setName(foundGame.name);
+      if (!name) {
+        setName(foundGame.name);
+      }
       setPath(`/games/${foundGame.slug}`);
-      setPageHeadline(foundGame.name.toUpperCase());
+      setPageHeadline(foundGame.name);
       setCardDescription(foundGame.description);
       if (foundGame.imageUrl) {
         setPageHeroImage(foundGame.imageUrl);
@@ -107,6 +154,9 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
       setPrice(foundGame.priceFrom ? String(foundGame.priceFrom) : '');
       if (foundGame.duration) {
         setTimeMin(foundGame.duration);
+      }
+      if (foundGame.tags && foundGame.tags.length > 0) {
+        setTagsInput(foundGame.tags.join(', '));
       }
     }
   };
@@ -121,18 +171,66 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
     try {
       const targetGameId = linkMode === 'existing' ? selectedGameId : (initialData?.linkedItemId || selectedGameId);
 
-      // If gameId is present and price/tags/isActive are provided, sync with PATCH /api/games/:gameId
+      // 1. Update menu item navigation details via PATCH /api/menu-items/:menuItemId
+      // "Navigation Display Name" (`name`) updates `title` on menu-items API.
+      const menuItemId = initialData?.id || subItemId;
+      if (menuItemId && menuItemId !== 'new') {
+        try {
+          const detailsArray = [
+            { label: 'How Many', value: peoplePerMachine || '1-2 Person', note: 'Per Machine' },
+            { label: 'How Many LANES', value: lanes || '8 LANES', note: '' },
+            { label: 'Time', value: timeMin || '30 or 60', note: 'Minutes' },
+            { label: 'Price', value: price || '9 to 17', note: 'Per Person' },
+            { label: 'Minimum Age', value: minAge || 'All Allowed', note: '' },
+            { label: 'Wheelchair Access', value: wheelchairAccess ? 'Yes' : 'No', note: 'Call the provider' },
+          ];
+
+          await apiClient.patch(`/menu-items/${menuItemId}`, {
+            title: name.trim(), // Explicitly Navigation Display Name only
+            slug: path.trim().replace(/^\//, ''),
+            linkUrl: path.trim(),
+            iconUrl: icon,
+            heroImageUrl: pageHeroImage,
+            imageUrl: pageHeroImage,
+            tagline: pageTagline,
+            taglineDescription: cardDescription,
+            bookingUrl: heroBookNowLink,
+            details: detailsArray,
+          });
+        } catch (err) {
+          console.error('Failed to sync navigation setup via PATCH /api/menu-items/:id', err);
+        }
+      }
+
+      // 2. Update game details via PATCH /api/games/:gameId
+      // "Hero Headline / Game Name" (`pageHeadline`) updates `name` on games API.
       if (targetGameId) {
         try {
           const numPrice = parseFloat(price);
+          const parsedTags = tagsInput
+            .split(',')
+            .map(t => t.trim())
+            .filter(Boolean);
+
           await apiClient.patch(`/games/${targetGameId}`, {
-            ...(isNaN(numPrice) ? {} : { priceFrom: numPrice }),
+            name: pageHeadline.trim(), // Explicitly Hero Headline / Game Name only
+            slug: path.trim().replace(/^\//, ''),
+            description: cardDescription,
+            imageUrl: pageHeroImage,
+            duration: timeMin,
+            priceFrom: isNaN(numPrice) ? 45 : numPrice,
+            tags: parsedTags.length > 0 ? parsedTags : ['family', 'indoor', 'featured'],
             isActive: true,
           });
         } catch (err) {
           console.error('Failed to sync game updates via PATCH /api/games/:id', err);
         }
       }
+
+      // Invalidate queries so UI immediately reflects updated menu item and game data
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-item'] });
+      queryClient.invalidateQueries({ queryKey: ['games'] });
 
       onSave({
         name: name.trim(),
@@ -227,6 +325,8 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
   const labelSmCls = 'block text-xs font-medium text-gray-400 mb-1';
   const sectionTitleCls = 'text-md font-medium text-white border-b border-[#3A3530] pb-2 mb-4';
 
+  const isLinked = Boolean(selectedGameId || initialData?.linkedItemId);
+
   return (
     <div>
       <div className="bg-[#1C1C1C] rounded-xl border border-[#3A3530] w-full max-w-4xl overflow-hidden flex flex-col mx-auto">
@@ -242,79 +342,66 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-8">
 
-          {/* ── Link Mode Selection ── */}
-          <div className="p-4 bg-[#252525] border border-[#3A3530] rounded-lg space-y-3">
-            <label className={labelCls}>Game Source</label>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => setLinkMode('existing')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${linkMode === 'existing' ? 'bg-[#FB3748] text-white' : 'bg-[#1C1C1C] text-gray-300 hover:bg-[#3A3530]'}`}
-              >
-                🔗 Select Pre-existing Game
-              </button>
-              <button
-                type="button"
-                onClick={() => setLinkMode('new')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${linkMode === 'new' ? 'bg-[#FB3748] text-white' : 'bg-[#1C1C1C] text-gray-300 hover:bg-[#3A3530]'}`}
-              >
-                ✨ Add New Game Details
-              </button>
-            </div>
-
-            {linkMode === 'existing' && (
-              <div className="mt-3">
-                <label className={labelSmCls}>Choose Pre-existing Game</label>
-                {isGamesLoading ? (
-                  <p className="text-xs text-gray-400">Loading games...</p>
-                ) : (
-                  <select
-                    value={selectedGameId}
-                    onChange={e => handleSelectGame(e.target.value)}
-                    className={inputCls}
-                  >
-                    <option value="">-- Select a Game --</option>
-                    {availableGames.map(game => (
-                      <option key={game._id} value={game._id}>
-                        {game.name} ({game.slug})
-                      </option>
-                    ))}
-                  </select>
-                )}
+          {/* ── Link Mode Selection (Hidden if already linked) ── */}
+          {!isLinked && (
+            <div className="p-4 bg-[#252525] border border-[#3A3530] rounded-lg space-y-3">
+              <label className={labelCls}>Game Source</label>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setLinkMode('existing')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${linkMode === 'existing' ? 'bg-[#FB3748] text-white' : 'bg-[#1C1C1C] text-gray-300 hover:bg-[#3A3530]'}`}
+                >
+                  🔗 Select Pre-existing Game
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLinkMode('new')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${linkMode === 'new' ? 'bg-[#FB3748] text-white' : 'bg-[#1C1C1C] text-gray-300 hover:bg-[#3A3530]'}`}
+                >
+                  ✨ Add New Game Details
+                </button>
               </div>
-            )}
-          </div>
+
+              {linkMode === 'existing' && (
+                <div className="mt-3">
+                  <label className={labelSmCls}>Choose Pre-existing Game</label>
+                  {isGamesLoading ? (
+                    <p className="text-xs text-gray-400">Loading games...</p>
+                  ) : (
+                    <select
+                      value={selectedGameId}
+                      onChange={e => handleSelectGame(e.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="">-- Select a Game --</option>
+                      {availableGames.map(game => (
+                        <option key={game._id} value={game._id}>
+                          {game.name} ({game.slug})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Navigation Setup ── */}
           <div>
             <h3 className={sectionTitleCls}>Navigation Setup</h3>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className={labelCls}>Name</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Indoor Mini Golf" className={inputCls} />
+                <label className={labelCls}>Navigation Display Name</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Axe Throwing" className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>URL Path / Slug</label>
-                <input type="text" value={path} onChange={e => setPath(e.target.value)} placeholder="e.g. /games/mini-golf" className={inputCls} />
+                <input type="text" value={path} onChange={e => setPath(e.target.value)} placeholder="e.g. /games/axe-throw" className={inputCls} />
               </div>
             </div>
 
-            {/* Page Type */}
-            <div className="mb-4">
-              <label className={labelCls}>Page Type</label>
-              <div className="flex gap-3">
-                {(['game', 'group-activity'] as const).map(type => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setPageType(type)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pageType === type ? 'bg-[#FB3748] text-white' : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#3A3530]'}`}
-                  >
-                    {type === 'game' ? '🎮 Choose Game' : '🎉 Group Activity'}
-                  </button>
-                ))}
-              </div>
-            </div>
+
 
             {/* Icon */}
             <div>
@@ -344,8 +431,8 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData }) => 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>Hero Headline</label>
-                  <input type="text" value={pageHeadline} onChange={e => setPageHeadline(e.target.value)} placeholder="e.g. BOOM BIRTHDAYS" className={inputCls} />
+                  <label className={labelCls}>Hero Headline / Game Name</label>
+                  <input type="text" value={pageHeadline} onChange={e => setPageHeadline(e.target.value)} placeholder="e.g. Axe Throw" className={inputCls} />
                 </div>
                 <div>
                   <label className={labelCls}>Page Tagline</label>
