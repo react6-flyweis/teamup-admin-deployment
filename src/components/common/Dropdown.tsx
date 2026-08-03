@@ -42,6 +42,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
     setOpen(false);
   };
 
+  const isValidValue = options.includes(value);
+
   return (
     <div
       ref={dropdownRef}
@@ -66,7 +68,9 @@ export const Dropdown: React.FC<DropdownProps> = ({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span>{value || placeholder || 'Select...'}</span>
+        <span className={!isValidValue ? 'text-gray-500 font-normal' : ''}>
+          {isValidValue ? value : (placeholder || 'Select...')}
+        </span>
         <span
           style={{
             display: "flex",
@@ -102,21 +106,21 @@ export const Dropdown: React.FC<DropdownProps> = ({
           transformOrigin: "top"
         }}
         role="listbox"
-        aria-activedescendant={value}
+        aria-activedescendant={isValidValue ? value : undefined}
       >
         {options.map((option) => (
           <button
             key={option}
             type="button" // 🔥 CRITICAL FIX: Prevents form submission
             className={`block w-full text-left px-4 py-2 transition font-bold text-[16px] ${
-              option === value ? "bg-[#A3EBFF]" : ""
+              isValidValue && option === value ? "bg-[#A3EBFF]" : ""
             }`}
             style={{ color: "#000" }}
             onClick={(e) => handleOptionClick(option, e)}
             onMouseDown={handleMouseDown}
             tabIndex={open ? 0 : -1}
             role="option"
-            aria-selected={value === option}
+            aria-selected={isValidValue && value === option}
           >
             {option}
           </button>
