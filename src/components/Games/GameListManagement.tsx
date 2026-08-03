@@ -15,8 +15,6 @@ interface Game {
   wheelchairAccess: string;
 }
 
-
-
 const columns = [
   { key: "gameName", label: "Game Name" },
   { key: "totalPeoplePerLane", label: "Total People Per Lane" },
@@ -39,15 +37,23 @@ export default function GameListingManagement() {
   useEffect(() => {
     if (gamesData?.games) {
       const mappedGames: Game[] = gamesData.games.map((g) => {
+        const minAgeStr = g.minimumAgeRequirement
+          ? g.idRequired
+            ? `${g.minimumAgeRequirement} (ID Req)`
+            : g.minimumAgeRequirement
+          : "-";
+
+        const price = g.pricePerPerson ?? g.priceFrom;
+
         return {
           id: g._id,
-          gameName: g.name,
-          totalPeoplePerLane: "-",
-          totalLanes: "-",
-          timeMin: g.duration || "-",
-          pricePerPerson: typeof g.priceFrom === 'number' ? `$${g.priceFrom}` : "-",
-          minAge: "-",// "18+ (ID Req)",
-          wheelchairAccess: "-",
+          gameName: g.name || g.gameName || "-",
+          totalPeoplePerLane: g.peopleAllowedPerLane != null ? String(g.peopleAllowedPerLane) : "-",
+          totalLanes: g.totalLanes != null ? String(g.totalLanes) : "-",
+          timeMin: g.timeOption || g.duration || "-",
+          pricePerPerson: typeof price === "number" ? `$${price}` : price ? `$${price}` : "-",
+          minAge: minAgeStr,
+          wheelchairAccess: g.wheelchairAccessible ? "Yes" : "No",
         };
       });
       setGames(mappedGames);
@@ -76,30 +82,15 @@ export default function GameListingManagement() {
   };
 
   const handleSaveGame = (gameData: GameData) => {
-    if (modalMode === "add") {
-      const newGame = {
-        id: (games.length + 1).toString(),
-        gameName: gameData.gameName,
-        totalPeoplePerLane: parseInt(gameData.peopleAllowedPerLane) || 0,
-        totalLanes: parseInt(gameData.totalLanes) || 0,
-        timeMin: gameData.timeOption,
-        pricePerPerson: gameData.pricePerPerson,
-        minAge: gameData.idRequired
-          ? `${gameData.minimumAgeRequirement} (ID Req)`
-          : gameData.minimumAgeRequirement,
-        wheelchairAccess: gameData.wheelchairAccessible ? "Yes" : "-",
-      };
-      setGames([...games, newGame]);
-    } else if (modalMode === "edit" && selectedGame) {
+    if (modalMode === "edit" && selectedGame) {
       setGames(
         games.map((game) =>
           game.id === selectedGame.id
             ? {
               ...game,
               gameName: gameData.gameName,
-              totalPeoplePerLane:
-                parseInt(gameData.peopleAllowedPerLane) || 0,
-              totalLanes: parseInt(gameData.totalLanes) || 0,
+              totalPeoplePerLane: gameData.peopleAllowedPerLane,
+              totalLanes: gameData.totalLanes,
               timeMin: gameData.timeOption,
               pricePerPerson: gameData.pricePerPerson,
               minAge: gameData.idRequired
@@ -243,28 +234,7 @@ export default function GameListingManagement() {
       {showModal && (
         <GameModal
           mode={modalMode}
-          initialData={
-            modalMode === "edit" && selectedGame
-              ? {
-                gameName: selectedGame.gameName,
-                peopleAllowedPerLane: selectedGame.totalPeoplePerLane + "",
-                totalLanes: selectedGame.totalLanes + "",
-                timeOption: selectedGame.timeMin,
-                pricePerPerson: selectedGame.pricePerPerson,
-                minimumAgeRequirement: selectedGame.minAge.replace(
-                  " (ID Req)",
-                  ""
-                ),
-                idRequired: selectedGame.minAge.includes("ID Req"),
-                wheelchairAccessible: selectedGame.wheelchairAccess === "Yes",
-                gameIcon: "",
-                cardImage: "",
-                bannerPhoto: "",
-                headline: "",
-                description: "",
-              }
-              : undefined
-          }
+          gameIdOrSlug={selectedGame?.id}
           onClose={() => {
             setShowModal(false);
             setSelectedGame(null);
