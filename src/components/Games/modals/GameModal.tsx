@@ -1,7 +1,8 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { UploadIcon } from "@/assets/icons";
 import { FormDropdown } from "@/components/common/FormDropdown";
 import Toggle from "@/components/common/Toggle";
+import { useCreateGameMutation, useUpdateGameMutation, useSingleGameQuery } from "@/hooks/useGames";
 
 export interface GameData {
   gameName: string;
@@ -21,9 +22,10 @@ export interface GameData {
 
 interface GameModalProps {
   mode: "add" | "edit";
+  gameIdOrSlug?: string;
   initialData?: Partial<GameData>;
   onClose: () => void;
-  onSave: (gameData: GameData) => void;
+  onSave?: (gameData: GameData) => void;
 }
 
 const emptyState: GameData = {
@@ -44,6 +46,7 @@ const emptyState: GameData = {
 
 const GameModal: React.FC<GameModalProps> = ({
   mode,
+  gameIdOrSlug,
   initialData,
   onClose,
   onSave,
@@ -52,6 +55,34 @@ const GameModal: React.FC<GameModalProps> = ({
     ...emptyState,
     ...initialData,
   });
+
+  const { data: singleGameData, isLoading: isFetchingGame } = useSingleGameQuery(
+    mode === "edit" ? gameIdOrSlug : undefined
+  );
+
+  useEffect(() => {
+    if (mode === "edit" && singleGameData?.game) {
+      const g = singleGameData.game;
+      setFormData({
+        gameName: g.gameName || g.name || "",
+        peopleAllowedPerLane: g.peopleAllowedPerLane != null ? String(g.peopleAllowedPerLane) : "",
+        totalLanes: g.totalLanes != null ? String(g.totalLanes) : "",
+        timeOption: g.timeOption || g.duration || "",
+        pricePerPerson: g.pricePerPerson != null ? String(g.pricePerPerson) : g.priceFrom != null ? String(g.priceFrom) : "",
+        minimumAgeRequirement: g.minimumAgeRequirement || "",
+        idRequired: g.idRequired ?? false,
+        wheelchairAccessible: g.wheelchairAccessible ?? false,
+        gameIcon: g.gameIconUrl || "",
+        cardImage: g.cardImageUrl || g.imageUrl || "",
+        bannerPhoto: g.bannerImageUrl || "",
+        headline: g.headline || "",
+        description: g.description || "",
+      });
+    }
+  }, [mode, singleGameData]);
+
+  const createGameMutation = useCreateGameMutation();
+  const updateGameMutation = useUpdateGameMutation();
 
   const iconRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLInputElement>(null);
@@ -68,7 +99,41 @@ const GameModal: React.FC<GameModalProps> = ({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSave(formData);
+    const payload = {
+      gameName: formData.gameName,
+      peopleAllowedPerLane: parseInt(formData.peopleAllowedPerLane) || 0,
+      totalLanes: parseInt(formData.totalLanes) || 0,
+      timeOption: formData.timeOption,
+      pricePerPerson: parseFloat(formData.pricePerPerson.replace(/[^0-9.]/g, "")) || 0,
+      minimumAgeRequirement: formData.minimumAgeRequirement,
+      idRequired: formData.idRequired,
+      wheelchairAccessible: formData.wheelchairAccessible,
+      gameIconUrl: formData.gameIcon || undefined,
+      cardImageUrl: formData.cardImage || undefined,
+      bannerImageUrl: formData.bannerPhoto || undefined,
+      headline: formData.headline || undefined,
+      description: formData.description || undefined,
+      isActive: true,
+    };
+
+    if (mode === "add") {
+      createGameMutation.mutate(payload, {
+        onSuccess: () => {
+          onClose();
+        },
+      });
+    } else if (mode === "edit" && gameIdOrSlug) {
+      updateGameMutation.mutate(
+        { gameIdOrSlug, payload },
+        {
+          onSuccess: () => {
+            onClose();
+          },
+        }
+      );
+    } else if (onSave) {
+      onSave(formData);
+    }
   }
 
   function handleBackdropClick(e: React.MouseEvent) {
@@ -108,6 +173,12 @@ const GameModal: React.FC<GameModalProps> = ({
             </svg>
           </button>
         </div>
+        {mode === "edit" && isFetchingGame ? (
+          <div className="py-12 flex justify-center items-center gap-2 font-montserrat text-gray-700">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#E1017D]"></div>
+            Loading game details...
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-5">
             <div>
@@ -511,12 +582,20 @@ const GameModal: React.FC<GameModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-7 py-2 bg-[#E1017D] text-white font-bold rounded-lg"
+              disabled={createGameMutation.isPending || updateGameMutation.isPending}
+              className="px-7 py-2 bg-[#E1017D] hover:bg-[#c5016b] disabled:opacity-50 text-white font-bold rounded-lg transition-colors duration-200"
             >
-              {mode === "add" ? "Add Game" : "Save Changes"}
+              {createGameMutation.isPending || updateGameMutation.isPending
+                ? mode === "add"
+                  ? "Creating..."
+                  : "Saving..."
+                : mode === "add"
+                ? "Add Game"
+                : "Save Changes"}
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
