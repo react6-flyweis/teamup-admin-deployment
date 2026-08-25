@@ -2,45 +2,69 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import type { LocationInfo } from './types';
 import { useLocationStore } from '@/store/locationStore';
-import { useUpdateLocationMutation } from '@/hooks/useLocations';
+import { useUpdateLocationMutation, useLocationsQuery, type LocationOpeningHour } from '@/hooks/useLocations';
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const getDefaultHours = (existingHours?: LocationOpeningHour[]) => {
+  return DAYS.map((day, idx) => {
+    const existing = existingHours?.find(
+      (h) => h.day.toLowerCase() === day.toLowerCase()
+    );
+    if (existing) {
+      return {
+        id: String(idx + 1),
+        day,
+        openTime: existing.isClosed ? 'Closed' : (existing.open || ''),
+        closeTime: existing.isClosed ? 'Closed' : (existing.close || ''),
+      };
+    }
+    return {
+      id: String(idx + 1),
+      day,
+      openTime: '',
+      closeTime: '',
+    };
+  });
+};
 
 const LocationHoursForm: React.FC = () => {
-  const [data, setData] = useState<LocationInfo>({
-    address: '',
-    mapEmbedUrl: '',
-    hours: [
-      { id: '1', day: 'Monday', openTime: '', closeTime: '' },
-      { id: '2', day: 'Tuesday', openTime: '', closeTime: '' },
-      { id: '3', day: 'Wednesday', openTime: '', closeTime: '' },
-      { id: '4', day: 'Thursday', openTime: '', closeTime: '' },
-      { id: '5', day: 'Friday', openTime: '', closeTime: '' },
-      { id: '6', day: 'Saturday', openTime: '', closeTime: '' },
-      { id: '7', day: 'Sunday', openTime: '', closeTime: '' },
-    ]
-  });
-  const { selectedLocation } = useLocationStore();
+  const { selectedLocation, setSelectedLocation } = useLocationStore();
+  const { data: locationsData } = useLocationsQuery();
   const updateLocation = useUpdateLocationMutation();
+
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const currentLocation = selectedLocation || locationsData?.locations?.[0];
+
+  const [data, setData] = useState<LocationInfo>({
+    address: '',
+    mapEmbedUrl: '',
+    hours: getDefaultHours(),
+  });
+
+  // Auto select first location if none selected in store
   useEffect(() => {
-    if (selectedLocation) {
+    if (!selectedLocation && locationsData?.locations?.length) {
+      setSelectedLocation(locationsData.locations[0]);
+    }
+  }, [locationsData, selectedLocation, setSelectedLocation]);
+
+  useEffect(() => {
+    if (currentLocation) {
       setData({
-        address: selectedLocation.address || '',
-        mapEmbedUrl: selectedLocation.mapEmbedUrl || '',
-        hours: (selectedLocation.openingHours || []).map((hour, idx) => ({
-          id: String(idx),
-          day: hour.day,
-          openTime: hour.isClosed ? 'Closed' : hour.open,
-          closeTime: hour.isClosed ? 'Closed' : hour.close,
-        })),
+        address: currentLocation.address || '',
+        mapEmbedUrl: currentLocation.mapEmbedUrl || '',
+        hours: getDefaultHours(currentLocation.openingHours),
       });
     }
-  }, [selectedLocation]);
+  }, [currentLocation]);
 
   const handleSave = () => {
-    if (!selectedLocation) {
-      setErrorMessage('No location selected.');
+    const targetLocationId = currentLocation?._id;
+    if (!targetLocationId) {
+      setErrorMessage('No location available to update.');
       return;
     }
 
@@ -62,7 +86,7 @@ const LocationHoursForm: React.FC = () => {
     };
 
     updateLocation.mutate(
-      { locationId: selectedLocation._id, payload },
+      { locationId: targetLocationId, payload },
       {
         onSuccess: () => {
           setSuccessMessage('Location details updated successfully!');
@@ -91,7 +115,7 @@ const LocationHoursForm: React.FC = () => {
         </div>
       )}
       {errorMessage && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">
           {errorMessage}
         </div>
       )}
@@ -103,7 +127,8 @@ const LocationHoursForm: React.FC = () => {
             type="text"
             value={data.address}
             onChange={(e) => setData({ ...data, address: e.target.value })}
-            className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
+            placeholder="Enter full address..."
+            className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white focus:outline-none focus:border-[#E1017D]"
           />
         </div>
 
@@ -113,7 +138,8 @@ const LocationHoursForm: React.FC = () => {
             type="text"
             value={data.mapEmbedUrl}
             onChange={(e) => setData({ ...data, mapEmbedUrl: e.target.value })}
-            className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
+            placeholder="https://www.google.com/maps/embed?..."
+            className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white focus:outline-none focus:border-[#E1017D]"
           />
         </div>
 
@@ -179,8 +205,8 @@ const LocationHoursForm: React.FC = () => {
       <div className="mt-8 flex justify-end">
         <button
           onClick={handleSave}
-          disabled={updateLocation.isPending || !selectedLocation}
-          className="bg-[#E1017D] hover:bg-[#c0016a] disabled:bg-[#e1017d]/50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors"
+          disabled={updateLocation.isPending || (!currentLocation && !locationsData?.locations?.length)}
+          className="bg-[#E1017D] hover:bg-[#c0016a] disabled:bg-[#e1017d]/50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors cursor-pointer"
         >
           {updateLocation.isPending ? 'Saving...' : 'Save Changes'}
         </button>
@@ -190,3 +216,4 @@ const LocationHoursForm: React.FC = () => {
 };
 
 export default LocationHoursForm;
+
