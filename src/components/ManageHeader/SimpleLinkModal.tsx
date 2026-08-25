@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { HeaderSubItem } from './types';
 import { CloseIcon, UploadIcon } from '@/assets/icons';
 import { createMenuItem, updateMenuItem } from '@/hooks/useHeaderSubItems';
+import type { HeaderSubItem } from './types';
+import { uploadFile } from '@/utils/fileUpload';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface SimpleLinkModalProps {
@@ -42,12 +43,15 @@ const SimpleLinkModal: React.FC<SimpleLinkModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setIcon(reader.result as string);
-      reader.readAsDataURL(file);
+      try {
+        const url = await uploadFile(file);
+        setIcon(url);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 
