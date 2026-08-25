@@ -3,6 +3,7 @@ import { Dropdown } from '../common/Dropdown';
 import type { MenuItem } from '@/pages/Bites';
 import { useFoodItemByIdQuery, useFoodCategoriesQuery } from '@/hooks/useBites';
 import { DRINK_CATEGORY_OPTIONS, formatDrinkCategory } from '@/utils/drinkCategories';
+import { uploadFile } from '@/utils/fileUpload';
 
 interface AddEditModalProps {
   onClose: () => void;
@@ -263,16 +264,15 @@ const AddEditFoodItemsModal: React.FC<AddEditModalProps> = ({
                       const input = document.createElement('input');
                       input.type = 'file';
                       input.accept = 'image/*';
-                      input.onchange = (e) => {
+                      input.onchange = async (e) => {
                         const file = (e.target as HTMLInputElement).files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (e) => {
-                            if (e.target?.result) {
-                              setImage(e.target.result as string);
-                            }
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const url = await uploadFile(file);
+                            setImage(url);
+                          } catch (error) {
+                            console.error('File upload failed:', error);
+                          }
                         }
                       };
                       input.click();
