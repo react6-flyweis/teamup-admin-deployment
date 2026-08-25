@@ -3,6 +3,7 @@ import { UploadIcon } from "@/assets/icons";
 import { FormDropdown } from "@/components/common/FormDropdown";
 import Toggle from "@/components/common/Toggle";
 import { useCreateGameMutation, useUpdateGameMutation, useSingleGameQuery } from "@/hooks/useGames";
+import { uploadFile } from "@/utils/fileUpload";
 
 export interface GameData {
   gameName: string;
@@ -140,18 +141,17 @@ const GameModal: React.FC<GameModalProps> = ({
     if (e.target === e.currentTarget) onClose();
   }
 
-  function handleImageUpload(field: keyof GameData, file?: File) {
+  async function handleImageUpload(field: keyof GameData, file?: File) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (evt.target?.result) {
-        setFormData((prev) => ({
-          ...prev,
-          [field]: evt.target!.result as string,
-        }));
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadFile(file);
+      setFormData((prev) => ({
+        ...prev,
+        [field]: url,
+      }));
+    } catch (error) {
+      console.error('File upload failed:', error);
+    }
   }
 
   return (

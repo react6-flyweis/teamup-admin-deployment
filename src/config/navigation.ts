@@ -1,20 +1,21 @@
-import type { IconProps,  } from '@/types';
-import DashboardIcon from '@/assets/icons/DashboardIcon';
+import type { IconProps, } from '@/types';
 import HomeIcon from '@/assets/icons/HomeIcon';
 import GameIcon from '@/assets/icons/GameIcon';
 import BiteIcon from '@/assets/icons/BiteIcon';
-import BookingIcon from '@/assets/icons/BookingIcon';
-import PaymentIcon from '@/assets/icons/PaymentIcon';
-import PromotionIcon from '@/assets/icons/PromotionIcon';
-import CustomerIcon from '@/assets/icons/CustomerIcon';
-import StaffIcon from '@/assets/icons/StaffIcon';
-import AlertIcon from '@/assets/icons/AlertIcon';
-import SocialReviewsIcon from '@/assets/icons/SocailReviewsIcon';
+// import DashboardIcon from '@/assets/icons/DashboardIcon';
+// import BookingIcon from '@/assets/icons/BookingIcon';
+// import PaymentIcon from '@/assets/icons/PaymentIcon';
+// import PromotionIcon from '@/assets/icons/PromotionIcon';
+// import CustomerIcon from '@/assets/icons/CustomerIcon';
+// import StaffIcon from '@/assets/icons/StaffIcon';
+// import AlertIcon from '@/assets/icons/AlertIcon';
+// import InsightIcon from '@/assets/icons/InsightIcon';
+// import SecurityIcon from '@/assets/icons/SecurityIcon';
 import VenuesIcon from '@/assets/icons/VenuesIcon';
-import InsightIcon from '@/assets/icons/InsightIcon';
-import SecurityIcon from '@/assets/icons/SecurityIcon';
 import HeaderIcon from '@/assets/icons/HeaderIcon';
+import SocialReviewsIcon from '@/assets/icons/SocailReviewsIcon';
 import FooterIcon from '@/assets/icons/FooterIcon';
+import EnquiriesIcon from '@/assets/icons/EnquiriesIcon';
 
 
 
@@ -110,6 +111,13 @@ export const navigationItems: NavigationItem[] = [
     icon: VenuesIcon,
     path: '/venues',
   },
+  {
+    id: 'enquiries',
+    label: 'Enquiries',
+    icon: EnquiriesIcon,
+    path: '/enquiries',
+  },
+
   // {
   //   id: 'insight',
   //   label: 'Insight',

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { uploadFile } from '@/utils/fileUpload';
+import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
 import type { HeaderSubItem, FeaturedEventCard, ChecklistItem, StatBlock } from './types';
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 
@@ -36,12 +38,15 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
 
   const iconFileRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setter(reader.result as string);
-      reader.readAsDataURL(file);
+      try {
+        const url = await uploadFile(file);
+        setter(url);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 
@@ -375,15 +380,16 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
                           </div>
                         </div>
 
-                        <div>
-                          <label className={labelSmCls}>Image URL</label>
-                          <input type="text" value={card.image} onChange={e => updateOtherGameCard(card.id, 'image', e.target.value)} placeholder="Paste image URL here" className={inputSmCls} />
-                          {card.image && (
-                            <div className="mt-2 w-full h-32 rounded-lg overflow-hidden border border-[#3A3530]">
-                              <img src={card.image} alt="game card" className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                        </div>
+                        <ImageInputWithUpload
+                          label="Image URL"
+                          value={card.image}
+                          onChange={(url) => updateOtherGameCard(card.id, 'image', url)}
+                          placeholder="Paste image URL here"
+                          inputClassName={inputSmCls}
+                          labelClassName={labelSmCls}
+                          previewWidth="w-full"
+                          previewHeight="h-32"
+                        />
                       </div>
                     ))}
                   </div>

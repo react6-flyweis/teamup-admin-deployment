@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import apiClient from '@/utils/apiClient';
 import UploadIcon from '@/assets/icons/UploadIcon';
+import { uploadFile } from '@/utils/fileUpload';
 
 interface FileUploaderProps {
   value: string;
@@ -26,14 +26,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     setIsUploading(true);
     setUploadError(null);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const response = await apiClient.post('/uploads', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      const fileUrl = response.data.url || response.data.filePath || response.data.path || '';
+      const fileUrl = await uploadFile(file);
       onChange(fileUrl);
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'message' in err) {

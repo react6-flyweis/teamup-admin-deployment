@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { BoomBundle } from './types';
 import { EditIcon, TrashIcon, EyeIcon, HideEyeIcon } from '@/assets/icons';
+import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
 
 interface BoomBundlesFormProps {
   initialData: BoomBundle[];
@@ -183,17 +184,14 @@ const BoomBundlesForm: React.FC<BoomBundlesFormProps> = ({ initialData, onSave, 
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Image URL</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  placeholder="/uploads/boom-bundles.jpg or https://..."
-                  className="w-full bg-[#2A2A2A] border border-[#3A3530] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#E1017D]"
-                />
-              </div>
+              <ImageInputWithUpload
+                label="Bundle Image"
+                value={formData.imageUrl}
+                onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                placeholder="/uploads/boom-bundles.jpg or https://..."
+                inputClassName="w-full bg-[#2A2A2A] border border-[#3A3530] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#E1017D]"
+                labelClassName="block text-sm font-medium text-gray-300 mb-1"
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

@@ -1,11 +1,11 @@
 import LocationVenues from "@/components/Venue/LocationVenue";
-import PerformanceAcrossLocations from "@/components/Venue/PerformanceAcrossLocations";
+// import PerformanceAcrossLocations from "@/components/Venue/PerformanceAcrossLocations";
 
 const Venues = () => {
   return (
     <div>
       <LocationVenues />
-      <PerformanceAcrossLocations />
+      {/* <PerformanceAcrossLocations /> */}
     </div>
   );
 };

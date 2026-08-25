@@ -86,6 +86,7 @@ export const useCreateGameMutation = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['games'] });
+      queryClient.invalidateQueries({ queryKey: ['game'] });
     },
   });
 };
@@ -102,8 +103,24 @@ export const useUpdateGameMutation = () => {
       const response = await apiClient.patch(`/games/${gameIdOrSlug}`, payload);
       return response.data;
     },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+      queryClient.invalidateQueries({ queryKey: ['game', variables.gameIdOrSlug] });
+      queryClient.invalidateQueries({ queryKey: ['game'] });
+    },
+  });
+};
+
+export const useDeleteGameMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (gameIdOrSlug: string) => {
+      const response = await apiClient.delete(`/games/${gameIdOrSlug}`);
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['games'] });
+      queryClient.invalidateQueries({ queryKey: ['game'] });
     },
   });
 };

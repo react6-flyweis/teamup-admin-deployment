@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { BitesAndDrinks, NightsOut } from './types';
+import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
 
 interface BitesAndEventsFormProps {
   initialBites: BitesAndDrinks;
@@ -36,10 +37,13 @@ const BitesAndEventsForm: React.FC<BitesAndEventsFormProps> = ({ initialBites, i
                 <label className="block text-sm text-gray-400 mb-1">Title</label>
                 <input type="text" value={bites.bitesTitle} onChange={e => setBites({...bites, bitesTitle: e.target.value})} className="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white" />
               </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Image URL</label>
-                <input type="text" value={bites.bitesImageUrl} onChange={e => setBites({...bites, bitesImageUrl: e.target.value})} className="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white" />
-              </div>
+              <ImageInputWithUpload
+                label="Bites Image"
+                value={bites.bitesImageUrl}
+                onChange={(url) => setBites({ ...bites, bitesImageUrl: url })}
+                placeholder="Paste image URL or upload"
+                inputClassName="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white text-sm"
+              />
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Menu Link</label>
                 <input type="text" value={bites.bitesMenuLink} onChange={e => setBites({...bites, bitesMenuLink: e.target.value})} className="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white" />
@@ -55,10 +59,13 @@ const BitesAndEventsForm: React.FC<BitesAndEventsFormProps> = ({ initialBites, i
                 <label className="block text-sm text-gray-400 mb-1">Title</label>
                 <input type="text" value={bites.drinksTitle} onChange={e => setBites({...bites, drinksTitle: e.target.value})} className="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white" />
               </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Image URL</label>
-                <input type="text" value={bites.drinksImageUrl} onChange={e => setBites({...bites, drinksImageUrl: e.target.value})} className="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white" />
-              </div>
+              <ImageInputWithUpload
+                label="Drinks Image"
+                value={bites.drinksImageUrl}
+                onChange={(url) => setBites({ ...bites, drinksImageUrl: url })}
+                placeholder="Paste image URL or upload"
+                inputClassName="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white text-sm"
+              />
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Menu Link</label>
                 <input type="text" value={bites.drinksMenuLink} onChange={e => setBites({...bites, drinksMenuLink: e.target.value})} className="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white" />
@@ -72,10 +79,14 @@ const BitesAndEventsForm: React.FC<BitesAndEventsFormProps> = ({ initialBites, i
       <div>
         <h2 className="text-xl font-semibold text-white mb-6">Nights Out Section</h2>
         <div className="space-y-4 max-w-2xl">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Background Image URL</label>
-            <input type="text" value={nightsOut.backgroundMediaUrl} onChange={e => setNightsOut({...nightsOut, backgroundMediaUrl: e.target.value})} className="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white" />
-          </div>
+          <ImageInputWithUpload
+            label="Background Media (Image or Video)"
+            value={nightsOut.backgroundMediaUrl}
+            onChange={(url) => setNightsOut({ ...nightsOut, backgroundMediaUrl: url })}
+            placeholder="Paste media URL or upload"
+            accept="image/*,video/*"
+            inputClassName="w-full h-10 px-3 rounded bg-[#1A1A1A] border border-[#3A3530] text-white text-sm"
+          />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Title</label>

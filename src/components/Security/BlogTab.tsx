@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import UploadIcon from "../../assets/icons/UploadIcon";
 import blogImage from "../../assets/Blog-image.jpg";
 import BlogCards from "./BlogCards";
+import { uploadFile } from "@/utils/fileUpload";
 
 const BlogTab = () => {
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -9,10 +10,15 @@ const BlogTab = () => {
   const [description, setDescription] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setImageUrl(URL.createObjectURL(file));
+      try {
+        const url = await uploadFile(file);
+        setImageUrl(url);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 

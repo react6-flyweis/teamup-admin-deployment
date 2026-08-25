@@ -5,8 +5,7 @@ import LocationHoursForm from "@/components/ManageHome/LocationHoursForm";
 import ChooseGamesForm from "@/components/ManageHome/ChooseGamesForm";
 import BitesAndEventsForm from "@/components/ManageHome/BitesAndEventsForm";
 import { mockHomePageData } from "@/components/ManageHome/mockData";
-import { useHomeQuery, useUpdateHomeMutation } from "@/hooks/useHome";
-import type { Game } from "@/hooks/useGames";
+import { useHomeQuery, useUpdateHomeMutation, type ChooseGameSectionData } from "@/hooks/useHome";
 
 type Tab = 'hero' | 'bundles' | 'location' | 'games' | 'bites';
 
@@ -70,6 +69,13 @@ const ManageHome: React.FC = () => {
     buttonLink: b.buttonLink || '',
     isActive: b.isActive ?? true
   })) : mockHomePageData.bundles;
+
+  // Map API chooseGameSection
+  const chooseGameSectionData: ChooseGameSectionData = rawData?.chooseGameSection || {
+    title: '',
+    subtitle: '',
+    items: []
+  };
 
   // Map API bitesEvents to BitesAndDrinks and NightsOut
   const bitesData = rawData?.bitesEvents ? {
@@ -144,21 +150,10 @@ const ManageHome: React.FC = () => {
     });
   };
 
-  const handleSaveGames = (gamesFields: Game[]) => {
+  const handleSaveGames = (sectionData: ChooseGameSectionData) => {
     updateHomeMutation.mutate({
       data: {
-        chooseGameSection: {
-          title: rawData?.chooseGameSection?.title || 'Choose Your Game',
-          subtitle: rawData?.chooseGameSection?.subtitle || 'Manage the games shown on the homepage.',
-          items: gamesFields.map((game, idx) => ({
-            title: game.name,
-            imageUrl: game.imageUrl,
-            buttonText: 'Book',
-            buttonLink: `/games/${game.slug}`,
-            order: idx + 1,
-            isActive: game.isActive
-          }))
-        }
+        chooseGameSection: sectionData
       }
     }, {
       onSuccess: () => {
@@ -256,6 +251,7 @@ const ManageHome: React.FC = () => {
         {activeTab === 'location' && <LocationHoursForm />}
         {activeTab === 'games' && (
           <ChooseGamesForm 
+            initialData={chooseGameSectionData}
             onSave={handleSaveGames} 
             isSaving={updateHomeMutation.isPending}
           />

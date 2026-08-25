@@ -22,7 +22,7 @@ const UserProfile: React.FC = () => {
             <span className="text-white text-lg font-semibold"><img className='rounded-full' src={DummyProfile} alt={userName} /></span>
           </div>
           {/* Online status indicator */}
-        <div className='absolute -right-2 top-0'><StarFilledIcon/></div>  
+          <div className='absolute -right-2 top-0'><StarFilledIcon /></div>
           <div className="status-indicator"></div>
         </div>
 
@@ -41,8 +41,8 @@ const UserProfile: React.FC = () => {
               <div className="text-sm font-medium text-neutral-900">{userName}</div>
               <div className="text-xs text-neutral-500">{userRole}</div>
             </div>
-            
-            <button className="w-full text-left px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors duration-150">
+
+            {/* <button className="w-full text-left px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors duration-150">
               Profile Settings
             </button>
             <button className="w-full text-left px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors duration-150">
@@ -50,10 +50,10 @@ const UserProfile: React.FC = () => {
             </button>
             <button className="w-full text-left px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors duration-150">
               Notifications
-            </button>
-            
+            </button> */}
+
             <div className="border-t border-neutral-100 mt-1">
-              <button 
+              <button
                 onClick={() => logout()}
                 className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-150"
               >
