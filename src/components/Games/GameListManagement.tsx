@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import HorizontalDotsIcon from "@/assets/icons/HorizontalDotsIcon";
 import ActionModal from "./modals/ActionModal";
-import GameModal, { type GameData } from "./modals/GameModal";
-import { useGamesQuery } from "@/hooks/useGames";
+import GameModal from "./modals/GameModal";
+import { useGamesQuery, useDeleteGameMutation } from "@/hooks/useGames";
 
 interface Game {
   id: string;
@@ -29,81 +29,51 @@ const columns = [
 export default function GameListingManagement() {
   const [showActionModal, setShowActionModal] = useState<number | null>(null);
   const { data: gamesData, isLoading, error } = useGamesQuery();
-  const [games, setGames] = useState<Game[]>([]);
+  const deleteGameMutation = useDeleteGameMutation();
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (gamesData?.games) {
-      const mappedGames: Game[] = gamesData.games.map((g) => {
-        const minAgeStr = g.minimumAgeRequirement
-          ? g.idRequired
-            ? `${g.minimumAgeRequirement} (ID Req)`
-            : g.minimumAgeRequirement
-          : "-";
+  const games: Game[] = useMemo(() => {
+    if (!gamesData?.games) return [];
+    return gamesData.games.map((g) => {
+      const minAgeStr = g.minimumAgeRequirement
+        ? g.idRequired
+          ? `${g.minimumAgeRequirement} (ID Req)`
+          : g.minimumAgeRequirement
+        : "-";
 
-        const price = g.pricePerPerson ?? g.priceFrom;
+      const price = g.pricePerPerson ?? g.priceFrom;
 
-        return {
-          id: g._id,
-          gameName: g.name || g.gameName || "-",
-          totalPeoplePerLane: g.peopleAllowedPerLane != null ? String(g.peopleAllowedPerLane) : "-",
-          totalLanes: g.totalLanes != null ? String(g.totalLanes) : "-",
-          timeMin: g.timeOption || g.duration || "-",
-          pricePerPerson: typeof price === "number" ? `$${price}` : price ? `$${price}` : "-",
-          minAge: minAgeStr,
-          wheelchairAccess: g.wheelchairAccessible ? "Yes" : "No",
-        };
-      });
-      setGames(mappedGames);
-    }
+      return {
+        id: g._id,
+        gameName: g.name || g.gameName || "-",
+        totalPeoplePerLane: g.peopleAllowedPerLane != null ? String(g.peopleAllowedPerLane) : "-",
+        totalLanes: g.totalLanes != null ? String(g.totalLanes) : "-",
+        timeMin: g.timeOption || g.duration || "-",
+        pricePerPerson: typeof price === "number" ? `$${price}` : price ? `$${price}` : "-",
+        minAge: minAgeStr,
+        wheelchairAccess: g.wheelchairAccessible ? "Yes" : "No",
+      };
+    });
   }, [gamesData]);
 
   const handleAddGame = () => {
-    setSelectedGame(null);
+    setSelectedGameId(null);
     setModalMode("add");
     setShowModal(true);
   };
 
   const handleEditGame = (gameId: string) => {
-    const game = games.find((g) => g.id === gameId);
-    if (game) {
-      setSelectedGame(game);
-      setModalMode("edit");
-      setShowModal(true);
-    }
+    setSelectedGameId(gameId);
+    setModalMode("edit");
+    setShowModal(true);
     setShowActionModal(null);
   };
 
   const handleDeleteGame = (gameId: string) => {
-    setGames(games.filter((game) => game.id !== gameId));
+    deleteGameMutation.mutate(gameId);
     setShowActionModal(null);
-  };
-
-  const handleSaveGame = (gameData: GameData) => {
-    if (modalMode === "edit" && selectedGame) {
-      setGames(
-        games.map((game) =>
-          game.id === selectedGame.id
-            ? {
-              ...game,
-              gameName: gameData.gameName,
-              totalPeoplePerLane: gameData.peopleAllowedPerLane,
-              totalLanes: gameData.totalLanes,
-              timeMin: gameData.timeOption,
-              pricePerPerson: gameData.pricePerPerson,
-              minAge: gameData.idRequired
-                ? `${gameData.minimumAgeRequirement} (ID Req)`
-                : gameData.minimumAgeRequirement,
-              wheelchairAccess: gameData.wheelchairAccessible ? "Yes" : "-",
-            }
-            : game
-        )
-      );
-    }
-    setShowModal(false);
-    setSelectedGame(null);
   };
 
   return (
@@ -233,13 +203,13 @@ export default function GameListingManagement() {
 
       {showModal && (
         <GameModal
+          key={selectedGameId || "new-game"}
           mode={modalMode}
-          gameIdOrSlug={selectedGame?.id}
+          gameIdOrSlug={selectedGameId || undefined}
           onClose={() => {
             setShowModal(false);
-            setSelectedGame(null);
+            setSelectedGameId(null);
           }}
-          onSave={handleSaveGame}
         />
       )}
     </section>
