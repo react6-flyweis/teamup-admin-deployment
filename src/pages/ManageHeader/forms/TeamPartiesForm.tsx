@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { uploadFile } from '@/utils/fileUpload';
+import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
 import type { HeaderSubItem, FeaturedEventCard, ChecklistItem } from './types';
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 
@@ -79,12 +81,15 @@ const TeamPartiesForm: React.FC<TeamPartiesFormProps> = ({
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setter(reader.result as string);
-      reader.readAsDataURL(file);
+      try {
+        const url = await uploadFile(file);
+        setter(url);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 
@@ -278,15 +283,16 @@ const TeamPartiesForm: React.FC<TeamPartiesFormProps> = ({
                             <input type="text" value={item.buttonLink || ''} onChange={e => updateChecklistItem(item.id, 'buttonLink', e.target.value)} placeholder="e.g. /book" className={inputSmCls} />
                           </div>
                         </div>
-                        <div>
-                          <label className={labelSmCls}>Image URL</label>
-                          <input type="text" value={item.image || ''} onChange={e => updateChecklistItem(item.id, 'image', e.target.value)} placeholder="Paste image URL here" className={inputSmCls} />
-                          {item.image && (
-                            <div className="mt-2 w-20 h-14 rounded-lg overflow-hidden border border-[#3A3530]">
-                              <img src={item.image} alt="checklist item" className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                        </div>
+                        <ImageInputWithUpload
+                          label="Image URL"
+                          value={item.image || ''}
+                          onChange={(url) => updateChecklistItem(item.id, 'image', url)}
+                          placeholder="Paste image URL here"
+                          inputClassName={inputSmCls}
+                          labelClassName={labelSmCls}
+                          previewWidth="w-20"
+                          previewHeight="h-14"
+                        />
                       </div>
                     ))}
                     {checklistItems.length === 0 && (
@@ -363,15 +369,16 @@ const TeamPartiesForm: React.FC<TeamPartiesFormProps> = ({
                             <input type="text" value={event.button2Link || ''} onChange={e => updateFeaturedEvent(event.id, 'button2Link', e.target.value)} placeholder="e.g. /games/snooker" className={inputSmCls} />
                           </div>
                         </div>
-                        <div>
-                          <label className={labelSmCls}>Featured Image URL</label>
-                          <input type="text" value={event.image} onChange={e => updateFeaturedEvent(event.id, 'image', e.target.value)} placeholder="Paste image URL here" className={inputSmCls} />
-                          {event.image && (
-                            <div className="mt-2 w-32 h-20 rounded-lg overflow-hidden border border-[#3A3530]">
-                              <img src={event.image} alt="featured" className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                        </div>
+                        <ImageInputWithUpload
+                          label="Featured Image URL"
+                          value={event.image}
+                          onChange={(url) => updateFeaturedEvent(event.id, 'image', url)}
+                          placeholder="Paste image URL here"
+                          inputClassName={inputSmCls}
+                          labelClassName={labelSmCls}
+                          previewWidth="w-32"
+                          previewHeight="h-20"
+                        />
                       </div>
                     ))}
                   </div>
