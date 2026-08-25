@@ -1,6 +1,6 @@
 import React from 'react';
 import LocationSelector from './LocationSelector';
-import SearchBar from './SearchBar';
+// import SearchBar from './SearchBar';
 import UserProfile from './UserProfile';
 
 const Header: React.FC = () => {
@@ -9,10 +9,10 @@ const Header: React.FC = () => {
       <div className="flex items-start justify-between gap-2.5 w-full h-14">
         {/* Location Selector */}
         <LocationSelector />
-        
+
         {/* Search Bar */}
-        <SearchBar />
-        
+        {/* <SearchBar /> */}
+
         {/* User Profile */}
         <UserProfile />
       </div>
