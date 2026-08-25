@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import UploadIcon from '../../assets/icons/UploadIcon';
+import { uploadFile } from '@/utils/fileUpload';
 
 interface BlogFormData {
   headline: string;
@@ -26,14 +27,15 @@ const BlogModal: React.FC<BlogModalProps> = ({
   const [formData, setFormData] = useState<BlogFormData>(initialData);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, image: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const url = await uploadFile(file);
+        setFormData((prev) => ({ ...prev, image: url }));
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 
