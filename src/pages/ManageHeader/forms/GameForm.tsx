@@ -4,6 +4,7 @@ import type { HeaderSubItem, OtherGameCard, ChecklistItem, ChooseGameCard } from
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 import { useGamesQuery } from '@/hooks/useGames';
 import apiClient from '@/utils/apiClient';
+import { uploadFile } from '@/utils/fileUpload';
 
 interface GameFormProps {
   onClose: () => void;
@@ -265,26 +266,30 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setter(reader.result as string);
-      reader.readAsDataURL(file);
+      try {
+        const url = await uploadFile(file);
+        setter(url);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 
   // ─── Other Games helpers ───────────────────────────────────
-  const handleOtherGameImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOtherGameImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
+      try {
+        const url = await uploadFile(file);
         const next = [...otherGames];
-        next[index].image = reader.result as string;
+        next[index].image = url;
         setOtherGames(next);
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
   const addOtherGame = () => setOtherGames([...otherGames, { id: Date.now().toString(), title: '', image: '', bookNowLink: '', learnMoreLink: '' }]);
@@ -301,16 +306,17 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
   };
 
   // ─── Choose Game Cards helpers ─────────────────────────────
-  const handleChooseGameImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChooseGameImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
+      try {
+        const url = await uploadFile(file);
         const next = [...chooseGameCards];
-        next[index].image = reader.result as string;
+        next[index].image = url;
         setChooseGameCards(next);
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
   const addChooseGameCard = () => setChooseGameCards([...chooseGameCards, { id: Date.now().toString(), title: '', image: '', link: '' }]);
