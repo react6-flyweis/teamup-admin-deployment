@@ -25,6 +25,7 @@ import Login from "./pages/Login";
 import StaffDetail from "./pages/StaffDetail";
 import Venues from "./pages/Venues";
 import SocialReviews from "./pages/SocialReviews";
+import Enquiries from "@/pages/Enquiries";
 import NotFound from "@/pages/NotFound";
 import { AuthGuard } from "@/components/AuthGuard";
 
@@ -60,6 +61,7 @@ function App() {
             <Route path="alerts" element={<Alerts />} />
             <Route path="social-reviews" element={<SocialReviews />} />
             <Route path="venues" element={<Venues />} />
+            <Route path="enquiries" element={<Enquiries />} />
             <Route path="insight" element={<Insights />} />
             <Route path="security" element={<Security />} />
             <Route path="*" element={<NotFound />} />
@@ -69,5 +71,6 @@ function App() {
     </Router>
   );
 }
+
 
 export default App;
