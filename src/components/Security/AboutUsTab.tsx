@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import UploadIcon from "../../assets/icons/UploadIcon";
 import aboutImage1 from "@/assets/aboutus-image1.jpg";
 import aboutImage2 from "@/assets/aboutus-image2.jpg";
+import { uploadFile } from "@/utils/fileUpload";
 
 const AboutUsTab = () => {
   const [imageUrl1, setImageUrl1] = useState<string>("");
@@ -11,17 +12,27 @@ const AboutUsTab = () => {
   const fileInputRef1 = useRef<HTMLInputElement>(null);
   const fileInputRef2 = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload1 = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload1 = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setImageUrl1(URL.createObjectURL(file));
+      try {
+        const url = await uploadFile(file);
+        setImageUrl1(url);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 
-  const handleFileUpload2 = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload2 = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setImageUrl2(URL.createObjectURL(file));
+      try {
+        const url = await uploadFile(file);
+        setImageUrl2(url);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 
