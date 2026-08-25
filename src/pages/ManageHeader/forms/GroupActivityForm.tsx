@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { uploadFile } from '@/utils/fileUpload';
 import type { HeaderSubItem, ChecklistItem } from './types';
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 
@@ -82,12 +83,15 @@ const GroupActivityForm: React.FC<GroupActivityFormProps> = ({
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setter(reader.result as string);
-      reader.readAsDataURL(file);
+      try {
+        const url = await uploadFile(file);
+        setter(url);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 
