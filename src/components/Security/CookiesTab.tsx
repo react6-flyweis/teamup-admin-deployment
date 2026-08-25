@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import UploadIcon from "../../assets/icons/UploadIcon";
 import cookiesImage from "@/assets/cookies-image.jpg";
+import { uploadFile } from "@/utils/fileUpload";
 
 const CookiesTab = () => {
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -8,10 +9,15 @@ const CookiesTab = () => {
   const [description, setDescription] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setImageUrl(URL.createObjectURL(file));
+      try {
+        const url = await uploadFile(file);
+        setImageUrl(url);
+      } catch (error) {
+        console.error('File upload failed:', error);
+      }
     }
   };
 
