@@ -57,3 +57,39 @@ export const useRegisterMutation = () => {
   });
 };
 
+export const useLogoutMutation = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuthStore();
+
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        await apiClient.post('/auth/logout');
+      } catch (err) {
+        console.warn('Logout API error:', err);
+      }
+    },
+    onSettled: () => {
+      logout();
+      navigate('/login');
+    },
+  });
+};
+
+export const useForgotPasswordMutation = () => {
+  return useMutation({
+    mutationFn: async (data: { email: string }) => {
+      const response = await apiClient.post('/auth/forgot-password', data);
+      return response.data;
+    },
+  });
+};
+
+export const useResetPasswordMutation = () => {
+  return useMutation({
+    mutationFn: async (data: { password: string; token?: string }) => {
+      const response = await apiClient.post('/auth/reset-password', data);
+      return response.data;
+    },
+  });
+};
