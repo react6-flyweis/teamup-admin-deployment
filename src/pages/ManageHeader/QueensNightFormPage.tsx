@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import type { HeaderCategory, HeaderSubItem } from '@/components/ManageHeader/types';
-import { initialMockData } from '@/components/ManageHeader/mockData';
+import type { HeaderSubItem } from '@/components/ManageHeader/types';
 import { Chevron } from '@/assets/icons';
 import QueensNightForm from './forms/QueensNightForm';
 import { useHeaderCategoriesQuery, useMenuItemQuery } from '@/hooks/useHeaderCategories';
@@ -34,7 +33,7 @@ const QueensNightFormPage: React.FC = () => {
       if (isMenuItemLoading) return;
 
       if (subItemId && subItemId !== 'new') {
-        let menuItem = menuItemResponse?.menuItem;
+        const menuItem = menuItemResponse?.menuItem;
         const linkedId = menuItem?.linkedItemId || subItemId;
         let realData: any = null;
 
@@ -77,11 +76,9 @@ const QueensNightFormPage: React.FC = () => {
           }
         }
 
-        // Fallback to local storage
-        const saved = localStorage.getItem('headerCategories');
-        const categories: HeaderCategory[] = saved ? JSON.parse(saved) : (categoriesData?.categories || initialMockData);
-        const category = categories.find(c => c.id === categoryId);
-        const subItem = category?.subItems.find(s => s.id === subItemId);
+        // Fallback to categoriesData
+        const category = categoriesData?.categories?.find(c => c.id === categoryId);
+        const subItem = category?.subItems?.find(s => s.id === subItemId);
         if (subItem && isMounted) {
           setInitialData(subItem);
         }
@@ -160,31 +157,6 @@ const QueensNightFormPage: React.FC = () => {
     } catch (error) {
       console.error('Error saving Queens Night API:', error);
     }
-
-    // Update local storage fallback
-    const saved = localStorage.getItem('headerCategories');
-    let categories: HeaderCategory[] = saved ? JSON.parse(saved) : initialMockData;
-    categories = categories.map(category => {
-      if (category.id === categoryId) {
-        let newSubItems = [...category.subItems];
-        if (subItemId && subItemId !== 'new') {
-          newSubItems = newSubItems.map(item =>
-            item.id === subItemId ? { ...item, ...subItemData, linkedItemId: targetLinkedItemId, pageType: 'queens-night' } as HeaderSubItem : item
-          );
-        } else {
-          newSubItems.push({
-            ...subItemData,
-            id: Date.now().toString(),
-            linkedItemId: targetLinkedItemId,
-            isHidden: false,
-            pageType: 'queens-night'
-          } as HeaderSubItem);
-        }
-        return { ...category, subItems: newSubItems };
-      }
-      return category;
-    });
-    localStorage.setItem('headerCategories', JSON.stringify(categories));
 
     await queryClient.invalidateQueries({ queryKey: ['header-categories'] });
     await queryClient.invalidateQueries({ queryKey: ['menu-item'] });
