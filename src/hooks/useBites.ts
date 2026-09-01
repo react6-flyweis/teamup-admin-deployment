@@ -249,26 +249,68 @@ export const useDeleteDrinkMutation = () => {
   });
 };
 
+export const useReorderFoodCategoriesMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (categories: { id: string; order: number }[]) => {
+      const response = await apiClient.patch('/menu/categories/reorder', { categories });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['food-categories'] });
+    },
+  });
+};
+
+export const useReorderFoodItemsMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: { id: string; order: number; categoryId?: string }[]) => {
+      const response = await apiClient.patch('/menu/items/reorder', { items });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['food-items'] });
+    },
+  });
+};
+
+export const useReorderDrinksMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (drinks: { id: string; order: number; category?: string }[]) => {
+      const response = await apiClient.patch('/drinks/reorder', { drinks });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drinks'] });
+    },
+  });
+};
+
 export interface FoodDrinksSiteContentResponse {
   content: FoodDrinksSiteContent;
 }
 
 // 4. Site Content (Combos) Hooks
-export const useFoodDrinksContentQuery = () => {
+export const useFoodDrinksContentQuery = (locationSlug?: string) => {
   return useQuery<FoodDrinksSiteContentResponse>({
-    queryKey: ['food-drinks-content'],
+    queryKey: ['food-drinks-content', locationSlug],
     queryFn: async () => {
-      const response = await apiClient.get('/site-content/food-drinks');
+      const queryParam = locationSlug ? `?locationSlug=${encodeURIComponent(locationSlug)}` : '';
+      const response = await apiClient.get(`/site-content/food-drinks${queryParam}`);
       return response.data;
     },
   });
 };
 
-export const useUpdateFoodDrinksContentMutation = () => {
+export const useUpdateFoodDrinksContentMutation = (locationSlug?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { data: { foodCombos?: FoodCombosSection }; isActive?: boolean }) => {
-      const response = await apiClient.patch('/site-content/food-drinks', payload);
+    mutationFn: async (payload: { data: { foodCombos?: FoodCombosSection }; isActive?: boolean; locationSlug?: string }) => {
+      const slug = payload.locationSlug || locationSlug;
+      const queryParam = slug ? `?locationSlug=${encodeURIComponent(slug)}` : '';
+      const response = await apiClient.patch(`/site-content/food-drinks${queryParam}`, payload);
       return response.data;
     },
     onSuccess: () => {

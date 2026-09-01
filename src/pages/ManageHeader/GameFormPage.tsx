@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { HeaderCategory, HeaderSubItem } from '@/components/ManageHeader/types';
-import { initialMockData } from '@/components/ManageHeader/mockData';
+import { useQueryClient } from '@tanstack/react-query';
+import type { HeaderSubItem } from '@/components/ManageHeader/types';
 import { Chevron } from '@/assets/icons';
 import GameForm from './forms/GameForm';
 import { useHeaderCategoriesQuery, useMenuItemQuery } from '@/hooks/useHeaderCategories';
+import { createMenuItem, updateMenuItem } from '@/hooks/useHeaderSubItems';
 
 const GameFormPage: React.FC = () => {
   const { categoryId, subItemId } = useParams<{ categoryId: string; subItemId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
   const { data: categoriesData } = useHeaderCategoriesQuery();
   const { data: menuItemResponse, isLoading: isMenuItemLoading } = useMenuItemQuery(subItemId);
@@ -23,7 +25,6 @@ const GameFormPage: React.FC = () => {
     if (menuItemResponse?.menuItem) {
       const apiItem = menuItemResponse.menuItem;
       
-      // Parse details array into pageDetails
       const detailsMap: Record<string, string> = {};
       if (Array.isArray(apiItem.details)) {
         apiItem.details.forEach((d: { label: string; value: string }) => {
@@ -61,13 +62,10 @@ const GameFormPage: React.FC = () => {
       return;
     }
 
-    // 2. Fallback to localStorage / categoriesData if API response is not available
-    const saved = localStorage.getItem('headerCategories');
-    const categories: HeaderCategory[] = saved ? JSON.parse(saved) : (categoriesData?.categories || initialMockData);
-    const category = categories.find(c => c.id === categoryId);
-
+    // 2. Fallback to categoriesData if API response is not available
+    const category = categoriesData?.categories?.find(c => c.id === categoryId);
     if (subItemId && subItemId !== 'new') {
-      const subItem = category?.subItems.find(s => s.id === subItemId);
+      const subItem = category?.subItems?.find(s => s.id === subItemId);
       if (subItem) {
         setInitialData(subItem);
       }
@@ -75,26 +73,45 @@ const GameFormPage: React.FC = () => {
     setLoading(false);
   }, [categoryId, subItemId, menuItemResponse, categoriesData, isMenuItemLoading]);
 
+  const handleSave = async (subItemData: Partial<HeaderSubItem>) => {
+    setLoading(true);
 
-
-  const handleSave = (subItemData: Partial<HeaderSubItem>) => {
-    const saved = localStorage.getItem('headerCategories');
-    let categories: HeaderCategory[] = saved ? JSON.parse(saved) : initialMockData;
-
-    categories = categories.map(category => {
-      if (category.id === categoryId) {
-        let newSubItems = [...category.subItems];
-        if (subItemId && subItemId !== 'new') {
-          newSubItems = newSubItems.map(item => item.id === subItemId ? { ...item, ...subItemData } as HeaderSubItem : item);
-        } else {
-          newSubItems.push({ ...subItemData, id: Date.now().toString(), isHidden: false } as HeaderSubItem);
-        }
-        return { ...category, subItems: newSubItems };
+    try {
+      if (subItemId && subItemId !== 'new') {
+        await updateMenuItem(subItemId, {
+          title: subItemData.name || '',
+          name: subItemData.name || '',
+          section: categoryId || 'choose-game',
+          linkUrl: subItemData.path || '',
+          path: subItemData.path || '',
+          icon: subItemData.icon || '',
+          iconUrl: subItemData.icon || '',
+          type: 'game',
+          linkedItemId: subItemData.linkedItemId,
+          isActive: subItemData.isActive ?? true,
+        });
+      } else {
+        await createMenuItem({
+          title: subItemData.name || '',
+          name: subItemData.name || '',
+          section: categoryId || 'choose-game',
+          linkUrl: subItemData.path || '',
+          path: subItemData.path || '',
+          icon: subItemData.icon || '',
+          iconUrl: subItemData.icon || '',
+          type: 'game',
+          linkedItemId: subItemData.linkedItemId,
+          order: 1,
+          isActive: subItemData.isActive ?? true,
+        });
       }
-      return category;
-    });
+    } catch (err) {
+      console.error('Error saving game menu item:', err);
+    }
 
-    localStorage.setItem('headerCategories', JSON.stringify(categories));
+    await queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+    await queryClient.invalidateQueries({ queryKey: ['menu-item'] });
+
     navigate('/manage-header');
   };
 

@@ -4,8 +4,8 @@ import BoomBundlesForm from "@/components/ManageHome/BoomBundlesForm";
 import LocationHoursForm from "@/components/ManageHome/LocationHoursForm";
 import ChooseGamesForm from "@/components/ManageHome/ChooseGamesForm";
 import BitesAndEventsForm from "@/components/ManageHome/BitesAndEventsForm";
-import { mockHomePageData } from "@/components/ManageHome/mockData";
 import { useHomeQuery, useUpdateHomeMutation, type ChooseGameSectionData } from "@/hooks/useHome";
+import { useLocationStore } from "@/store/locationStore";
 
 type Tab = 'hero' | 'bundles' | 'location' | 'games' | 'bites';
 
@@ -13,8 +13,11 @@ const ManageHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('hero');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const { data: homeResponse, isLoading, error } = useHomeQuery();
-  const updateHomeMutation = useUpdateHomeMutation();
+  const { selectedLocation } = useLocationStore();
+  const locationSlug = selectedLocation?.slug;
+
+  const { data: homeResponse, isLoading, error } = useHomeQuery(locationSlug);
+  const updateHomeMutation = useUpdateHomeMutation(locationSlug);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'hero', label: 'Hero Banner' },
@@ -45,19 +48,19 @@ const ManageHome: React.FC = () => {
   const rawData = homeResponse?.content?.data;
 
   // Map API data to HeroSection structure
-  const heroData = rawData?.hero && rawData?.topBanner ? {
-    topBannerText: rawData.topBanner.text || '',
-    isTopBannerActive: rawData.topBanner.isActive ?? true,
-    title: rawData.hero.title || '',
-    subtitle: rawData.hero.subtitle || '',
-    backgroundMediaUrl: rawData.hero.backgroundMediaUrl || '',
+  const heroData = {
+    topBannerText: rawData?.topBanner?.text || '',
+    isTopBannerActive: rawData?.topBanner?.isActive ?? true,
+    title: rawData?.hero?.title || '',
+    subtitle: rawData?.hero?.subtitle || '',
+    backgroundMediaUrl: rawData?.hero?.backgroundMediaUrl || '',
     buttons: {
-      primaryText: rawData.hero.primaryButton?.text || '',
-      primaryLink: rawData.hero.primaryButton?.link || '',
-      secondaryText: rawData.hero.secondaryButton?.text || '',
-      secondaryLink: rawData.hero.secondaryButton?.link || '',
+      primaryText: rawData?.hero?.primaryButton?.text || '',
+      primaryLink: rawData?.hero?.primaryButton?.link || '',
+      secondaryText: rawData?.hero?.secondaryButton?.text || '',
+      secondaryLink: rawData?.hero?.secondaryButton?.link || '',
     }
-  } : mockHomePageData.hero;
+  };
 
   // Map API boomBundles to BoomBundle[]
   const bundlesData = rawData?.boomBundles?.items ? rawData.boomBundles.items.map((b, idx) => ({
@@ -68,7 +71,7 @@ const ManageHome: React.FC = () => {
     buttonText: b.buttonText || '',
     buttonLink: b.buttonLink || '',
     isActive: b.isActive ?? true
-  })) : mockHomePageData.bundles;
+  })) : [];
 
   // Map API chooseGameSection
   const chooseGameSectionData: ChooseGameSectionData = rawData?.chooseGameSection || {
@@ -78,23 +81,23 @@ const ManageHome: React.FC = () => {
   };
 
   // Map API bitesEvents to BitesAndDrinks and NightsOut
-  const bitesData = rawData?.bitesEvents ? {
-    bitesTitle: rawData.bitesEvents.bites?.title || '',
-    bitesImageUrl: rawData.bitesEvents.bites?.imageUrl || '',
-    bitesMenuLink: rawData.bitesEvents.bites?.menuLink || '',
-    drinksTitle: rawData.bitesEvents.drinks?.title || '',
-    drinksImageUrl: rawData.bitesEvents.drinks?.imageUrl || '',
-    drinksMenuLink: rawData.bitesEvents.drinks?.menuLink || '',
-  } : mockHomePageData.bites;
+  const bitesData = {
+    bitesTitle: rawData?.bitesEvents?.bites?.title || '',
+    bitesImageUrl: rawData?.bitesEvents?.bites?.imageUrl || '',
+    bitesMenuLink: rawData?.bitesEvents?.bites?.menuLink || '',
+    drinksTitle: rawData?.bitesEvents?.drinks?.title || '',
+    drinksImageUrl: rawData?.bitesEvents?.drinks?.imageUrl || '',
+    drinksMenuLink: rawData?.bitesEvents?.drinks?.menuLink || '',
+  };
 
-  const nightsOutData = rawData?.bitesEvents?.nightsOut ? {
-    title: rawData.bitesEvents.nightsOut.title || '',
-    subtitle: rawData.bitesEvents.nightsOut.subtitle || '',
-    description: rawData.bitesEvents.nightsOut.description || '',
-    backgroundMediaUrl: rawData.bitesEvents.nightsOut.backgroundImageUrl || '',
-    buttonText: rawData.bitesEvents.nightsOut.buttonText || '',
-    buttonLink: rawData.bitesEvents.nightsOut.buttonLink || '',
-  } : mockHomePageData.nightsOut;
+  const nightsOutData = {
+    title: rawData?.bitesEvents?.nightsOut?.title || '',
+    subtitle: rawData?.bitesEvents?.nightsOut?.subtitle || '',
+    description: rawData?.bitesEvents?.nightsOut?.description || '',
+    backgroundMediaUrl: rawData?.bitesEvents?.nightsOut?.backgroundImageUrl || '',
+    buttonText: rawData?.bitesEvents?.nightsOut?.buttonText || '',
+    buttonLink: rawData?.bitesEvents?.nightsOut?.buttonLink || '',
+  };
 
   // Save callback handlers
   const handleSaveHero = (heroFields: typeof heroData) => {

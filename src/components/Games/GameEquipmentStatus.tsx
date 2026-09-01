@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Toggle from "@/components/common/Toggle";
 import Pagination from "@/utils/Pagination";
 import ChevronDownIcon from "@/assets/icons/ChevronDownIcon";
-import { useGameEquipmentQuery, type GameEquipmentLane } from "@/hooks/useGameEquipment";
+import { useGameEquipmentQuery, useUpdateGameEquipmentMutation, type GameEquipmentLane } from "@/hooks/useGameEquipment";
 
 const PAGE_SIZE = 8;
 
@@ -26,6 +26,7 @@ export default function GameEquipmentStatus() {
   const [page, setPage] = useState(1);
 
   const { data, isLoading, isError, error } = useGameEquipmentQuery();
+  const updateMutation = useUpdateGameEquipmentMutation();
   const equipmentList = useMemo(() => data?.equipment || [], [data?.equipment]);
 
   const [lanesState, setLanesState] = useState<Record<string, GameEquipmentLane[]>>({});
@@ -49,14 +50,25 @@ export default function GameEquipmentStatus() {
     page * PAGE_SIZE
   );
 
-  function handleToggle(gameKey: string, laneIdx: number) {
+  function handleToggle(gameKey: string, laneIdx: number, equipmentId?: string | null) {
     setLanesState((prev) => {
       const currentLanes = prev[gameKey] ? [...prev[gameKey]] : [];
       if (!currentLanes[laneIdx]) return prev;
-      currentLanes[laneIdx] = {
+      const updatedLane = {
         ...currentLanes[laneIdx],
         isIssueActive: !currentLanes[laneIdx].isIssueActive,
       };
+      currentLanes[laneIdx] = updatedLane;
+
+      if (equipmentId) {
+        updateMutation.mutate({
+          id: equipmentId,
+          payload: {
+            lanes: currentLanes,
+          },
+        });
+      }
+
       return { ...prev, [gameKey]: currentLanes };
     });
   }
@@ -221,7 +233,7 @@ export default function GameEquipmentStatus() {
                                             <Toggle
                                               checked={!!lane.isIssueActive}
                                               onChange={() =>
-                                                handleToggle(gameKey, laneIdx)
+                                                handleToggle(gameKey, laneIdx, game.id)
                                               }
                                               activeText=""
                                               inactiveText=""
