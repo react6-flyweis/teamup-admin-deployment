@@ -8,6 +8,7 @@ import {
   useDeleteContentPageMutation,
 } from '@/hooks/useContentPages';
 import { useFooterQuery, useUpdateFooterMutation } from '@/hooks/useFooter';
+import { useLocationStore } from '@/store/locationStore';
 
 interface FooterLink {
   id: string;
@@ -17,12 +18,15 @@ interface FooterLink {
 }
 
 const ManageFooter: React.FC = () => {
+  const { selectedLocation } = useLocationStore();
+  const locationSlug = selectedLocation?.slug;
+
   const { data: pagesData, isLoading: isPagesLoading, error: pagesError } = useContentPagesQuery();
-  const { data: footerData, isLoading: isFooterLoading, error: footerError } = useFooterQuery();
+  const { data: footerData, isLoading: isFooterLoading, error: footerError } = useFooterQuery(locationSlug);
   const createMutation = useCreateContentPageMutation();
   const updateMutation = useUpdateContentPageMutation();
   const deleteMutation = useDeleteContentPageMutation();
-  const updateFooterMutation = useUpdateFooterMutation();
+  const updateFooterMutation = useUpdateFooterMutation(locationSlug);
 
   const [links, setLinks] = useState<FooterLink[]>([]);
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
