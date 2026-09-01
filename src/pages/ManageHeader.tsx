@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { HeaderCategory, HeaderSubItem } from '@/components/ManageHeader/types';
-import { useHeaderCategoriesQuery, useUpdateCategoryMutation } from '@/hooks/useHeaderCategories';
+import { useHeaderCategoriesQuery, useUpdateCategoryMutation, useDeleteCategoryMutation } from '@/hooks/useHeaderCategories';
 import { useLocationsQuery } from '@/hooks/useLocations';
 import { EditIcon, TrashIcon } from '@/assets/icons';
 import SubItemList from '@/components/ManageHeader/SubItemList';
@@ -9,30 +9,40 @@ import { useNavigate } from 'react-router-dom';
 import Toggle from '@/components/common/Toggle';
 import TeamUpLogo from '@/assets/TeamUp.png';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
-import { deleteMenuItem } from '@/hooks/useHeaderSubItems';
+import { useQueryClient } from '@tanstack/react-query';
 
 const ManageHeader: React.FC = () => {
+  const queryClient = useQueryClient();
   const { data: categoriesData, isLoading: isCategoriesLoading } = useHeaderCategoriesQuery();
   const updateCategory = useUpdateCategoryMutation();
+  const deleteCategory = useDeleteCategoryMutation();
   const { data: locationsData, isLoading: isLocationsLoading } = useLocationsQuery();
   const [categories, setCategories] = useState<HeaderCategory[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [locations, setLocations] = useState<string[]>(['🇺🇸 Folsom, CA']);
   const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (categoriesData?.categories) {
       setCategories(categoriesData.categories);
-      if (categoriesData.categories.length > 0 && !selectedCategoryId) {
-        setSelectedCategoryId(categoriesData.categories[0].id);
-      }
+      setSelectedCategoryId((prev) => {
+        if (!prev && categoriesData.categories.length > 0) {
+          return categoriesData.categories[0].id;
+        }
+        if (prev && !categoriesData.categories.some((c) => c.id === prev)) {
+          return categoriesData.categories[0]?.id || null;
+        }
+        return prev;
+      });
     }
-  }, [categoriesData, selectedCategoryId]);
+  }, [categoriesData]);
 
   useEffect(() => {
     if (locationsData?.locations) {
-      const formattedLocs = locationsData.locations.map(loc => `${loc.city}, ${loc.state}`);
+      const activeLocs = locationsData.locations.filter(loc => loc.isActive !== false);
+      const formattedLocs = activeLocs.map(loc => `${loc.city}, ${loc.state}`);
       if (formattedLocs.length > 0) {
         setLocations(formattedLocs);
       }
@@ -43,21 +53,31 @@ const ManageHeader: React.FC = () => {
     setLocations(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
-
-
   const saveCategories = (newCategories: HeaderCategory[]) => {
     setCategories(newCategories);
   };
 
   const toggleVisibility = (id: string) => {
     const category = categories.find(cat => cat.id === id);
-    const newIsActive = category ? !!category.isHidden : false;
+    if (!category) return;
+    const previousCategories = [...categories];
+    const newIsActive = !!category.isHidden;
 
     // Optimistically update local UI state
     saveCategories(categories.map(cat => cat.id === id ? { ...cat, isHidden: !cat.isHidden } : cat));
 
-    // Send PATCH /api/menu-items/categories/:categoryId with { isActive }
-    updateCategory.mutate({ categoryId: id, isActive: newIsActive });
+    // Send PATCH /api/menu-items/categories/:categoryId with rollback on error
+    updateCategory.mutate(
+      { categoryId: id, isActive: newIsActive },
+      {
+        onError: (err) => {
+          console.error('Error updating category visibility:', err);
+          saveCategories(previousCategories);
+          setErrorMessage('Failed to update category status. Changes have been reverted.');
+          queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+        },
+      }
+    );
   };
 
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
@@ -67,22 +87,31 @@ const ManageHeader: React.FC = () => {
     if (!deletingCategoryId) return;
     const id = deletingCategoryId;
     setIsDeletingCategory(true);
+    setErrorMessage(null);
+
+    const previousCategories = [...categories];
+    const previousSelectedId = selectedCategoryId;
+
     const updated = categories.filter(cat => cat.id !== id);
     saveCategories(updated);
     if (selectedCategoryId === id) {
       setSelectedCategoryId(updated.length > 0 ? updated[0].id : null);
     }
+
     try {
-      await deleteMenuItem(id);
+      await deleteCategory.mutateAsync(id);
     } catch (err) {
       console.error('Error deleting menu item category:', err);
+      // Rollback optimistic update on failure
+      saveCategories(previousCategories);
+      setSelectedCategoryId(previousSelectedId);
+      setErrorMessage('Failed to delete category. The item has been restored.');
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
     } finally {
       setIsDeletingCategory(false);
       setDeletingCategoryId(null);
     }
   };
-
-
 
   const updateSubItems = (categoryId: string, subItems: HeaderSubItem[]) => {
     saveCategories(categories.map(cat => cat.id === categoryId ? { ...cat, subItems } : cat));
@@ -108,6 +137,18 @@ const ManageHeader: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manage Header</h1>
       </div>
+
+      {errorMessage && (
+        <div className="mb-6 p-4 bg-red-900/40 border border-red-500/60 rounded-xl text-red-200 text-sm flex items-center justify-between">
+          <span>⚠️ {errorMessage}</span>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-300 hover:text-white text-xs underline ml-4 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Live Preview Section */}
       <div className="mb-8 border border-[#3A3530] rounded-xl overflow-hidden shadow-2xl">
