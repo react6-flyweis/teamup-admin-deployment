@@ -81,23 +81,27 @@ export interface SocialReviewsResponse {
 export interface UpdateSocialReviewsPayload {
   data: SocialReviewsData;
   isActive?: boolean;
+  locationSlug?: string;
 }
 
-export const useSocialReviewsQuery = () => {
+export const useSocialReviewsQuery = (locationSlug?: string) => {
   return useQuery<SocialReviewsResponse>({
-    queryKey: ['social-reviews-content'],
+    queryKey: ['social-reviews-content', locationSlug],
     queryFn: async () => {
-      const response = await apiClient.get('/site-content/social-reviews');
+      const queryParam = locationSlug ? `?locationSlug=${encodeURIComponent(locationSlug)}` : '';
+      const response = await apiClient.get(`/site-content/social-reviews${queryParam}`);
       return response.data;
     },
   });
 };
 
-export const useUpdateSocialReviewsMutation = () => {
+export const useUpdateSocialReviewsMutation = (locationSlug?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: UpdateSocialReviewsPayload) => {
-      const response = await apiClient.patch('/site-content/social-reviews', payload);
+      const slug = payload.locationSlug || locationSlug;
+      const queryParam = slug ? `?locationSlug=${encodeURIComponent(slug)}` : '';
+      const response = await apiClient.patch(`/site-content/social-reviews${queryParam}`, payload);
       return response.data;
     },
     onSuccess: () => {
@@ -106,11 +110,13 @@ export const useUpdateSocialReviewsMutation = () => {
   });
 };
 
-export const useSeedSocialReviewsMutation = () => {
+export const useSeedSocialReviewsMutation = (locationSlug?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { section: string; data: SocialReviewsData; isActive: boolean }) => {
-      const response = await apiClient.put('/site-content/social-reviews', payload);
+    mutationFn: async (payload: { section: string; data: SocialReviewsData; isActive: boolean; locationSlug?: string }) => {
+      const slug = payload.locationSlug || locationSlug;
+      const queryParam = slug ? `?locationSlug=${encodeURIComponent(slug)}` : '';
+      const response = await apiClient.put(`/site-content/social-reviews${queryParam}`, payload);
       return response.data;
     },
     onSuccess: () => {
