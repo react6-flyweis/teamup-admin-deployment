@@ -94,23 +94,27 @@ export interface HomeResponse {
 export interface UpdateHomePayload {
   data: HomeData;
   isActive?: boolean;
+  locationSlug?: string;
 }
 
-export const useHomeQuery = () => {
+export const useHomeQuery = (locationSlug?: string) => {
   return useQuery<HomeResponse>({
-    queryKey: ['home-content'],
+    queryKey: ['home-content', locationSlug],
     queryFn: async () => {
-      const response = await apiClient.get('/site-content/home');
+      const queryParam = locationSlug ? `?locationSlug=${encodeURIComponent(locationSlug)}` : '';
+      const response = await apiClient.get(`/site-content/home${queryParam}`);
       return response.data;
     },
   });
 };
 
-export const useUpdateHomeMutation = () => {
+export const useUpdateHomeMutation = (locationSlug?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: UpdateHomePayload) => {
-      const response = await apiClient.patch('/site-content/home', payload);
+      const slug = payload.locationSlug || locationSlug;
+      const queryParam = slug ? `?locationSlug=${encodeURIComponent(slug)}` : '';
+      const response = await apiClient.patch(`/site-content/home${queryParam}`, payload);
       return response.data;
     },
     onSuccess: () => {
