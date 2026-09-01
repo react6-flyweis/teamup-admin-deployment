@@ -29,23 +29,27 @@ export interface UpdateFooterPayload {
   section: string;
   data: FooterData;
   isActive: boolean;
+  locationSlug?: string;
 }
 
-export const useFooterQuery = () => {
+export const useFooterQuery = (locationSlug?: string) => {
   return useQuery<FooterResponse>({
-    queryKey: ['footer-content'],
+    queryKey: ['footer-content', locationSlug],
     queryFn: async () => {
-      const response = await apiClient.get('/site-content/footer');
+      const queryParam = locationSlug ? `?locationSlug=${encodeURIComponent(locationSlug)}` : '';
+      const response = await apiClient.get(`/site-content/footer${queryParam}`);
       return response.data;
     },
   });
 };
 
-export const useUpdateFooterMutation = () => {
+export const useUpdateFooterMutation = (locationSlug?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: UpdateFooterPayload) => {
-      const response = await apiClient.patch('/site-content/footer', payload);
+      const slug = payload.locationSlug || locationSlug;
+      const queryParam = slug ? `?locationSlug=${encodeURIComponent(slug)}` : '';
+      const response = await apiClient.patch(`/site-content/footer${queryParam}`, payload);
       return response.data;
     },
     onSuccess: () => {
