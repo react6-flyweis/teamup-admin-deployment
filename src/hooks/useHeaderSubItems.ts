@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/utils/apiClient';
 
 // ─── API Payload Interfaces ───────────────────────────────
@@ -214,4 +215,18 @@ export const updateMenuItem = async (id: string, payload: Partial<MenuItemPayloa
 export const deleteMenuItem = async (id: string) => {
   const res = await apiClient.delete(`/menu-items/${id}`);
   return res.data;
+};
+
+export const useReorderMenuItemsMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: { id: string; order: number; section?: string }[]) => {
+      const res = await apiClient.patch('/menu-items/reorder', { items });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-item'] });
+    },
+  });
 };

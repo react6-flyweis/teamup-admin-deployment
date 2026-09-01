@@ -3,8 +3,7 @@ import type { HeaderSubItem } from './types';
 import { EditIcon, TrashIcon } from '@/assets/icons';
 import { useNavigate } from 'react-router-dom';
 import Toggle from '@/components/common/Toggle';
-import { useUpdateMenuItemMutation } from '@/hooks/useHeaderCategories';
-import { deleteMenuItem, deleteGroupActivity, deleteTeamParty, deleteBoomBundle, deleteQueensNight } from '@/hooks/useHeaderSubItems';
+import { useUpdateMenuItemMutation, useDeleteMenuItemMutation } from '@/hooks/useHeaderCategories';
 import { useQueryClient } from '@tanstack/react-query';
 import SimpleLinkModal from './SimpleLinkModal';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
@@ -12,15 +11,16 @@ import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
 interface SubItemListProps {
   subItems: HeaderSubItem[];
   categoryName: string;
-  availableGames: HeaderSubItem[];
+  availableGames?: HeaderSubItem[];
   categoryId: string;
   onUpdate: (newSubItems: HeaderSubItem[]) => void;
 }
 
-const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categoryId, availableGames, onUpdate }) => {
+const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categoryId, onUpdate }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const updateMenuItemMutation = useUpdateMenuItemMutation();
+  const deleteMenuItemMutation = useDeleteMenuItemMutation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [editingSubItem, setEditingSubItem] = useState<HeaderSubItem | null>(null);
@@ -40,42 +40,52 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
 
   const toggleVisibility = (id: string) => {
     const item = subItems.find(i => i.id === id);
-    const newIsActive = item ? !!item.isHidden : false;
+    if (!item) return;
+    const previousSubItems = [...subItems];
+    const newIsActive = !!item.isHidden;
 
     // Optimistically update parent state
-    onUpdate(subItems.map(item => 
-      item.id === id ? { ...item, isHidden: !item.isHidden, isActive: newIsActive } : item
+    onUpdate(subItems.map(i => 
+      i.id === id ? { ...i, isHidden: !i.isHidden, isActive: newIsActive } : i
     ));
 
-    // Send status update API request: PATCH /api/menu-items/:menuItemId
-    updateMenuItemMutation.mutate({ menuItemId: id, payload: { isActive: newIsActive } });
+    // Send status update API request with rollback on error
+    updateMenuItemMutation.mutate(
+      { menuItemId: id, payload: { isActive: newIsActive } },
+      {
+        onError: (err) => {
+          console.error('Error updating sub-item visibility:', err);
+          onUpdate(previousSubItems);
+          queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+        },
+      }
+    );
   };
 
   const confirmDeleteSubItem = async () => {
     if (!deletingItem) return;
     const item = deletingItem;
     setIsDeleting(true);
+    const previousSubItems = [...subItems];
 
     // Optimistically update parent state
     onUpdate(subItems.filter(i => i.id !== item.id));
 
     try {
-      await deleteMenuItem(item.id);
-      const type = item.type || item.pageType;
-      if (item.linkedItemId) {
-        if (type === 'group-activity') await deleteGroupActivity(item.linkedItemId).catch(() => {});
-        else if (type === 'team-parties') await deleteTeamParty(item.linkedItemId).catch(() => {});
-        else if (type === 'boom-bundle') await deleteBoomBundle(item.linkedItemId).catch(() => {});
-        else if (type === 'queens-night') await deleteQueensNight(item.linkedItemId).catch(() => {});
-      }
+      await deleteMenuItemMutation.mutateAsync({
+        id: item.id,
+        linkedItemId: item.linkedItemId,
+        type: item.type || item.pageType,
+      });
     } catch (err) {
       console.error('Error deleting menu item or entity:', err);
+      // Rollback optimistic update on failure
+      onUpdate(previousSubItems);
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
     } finally {
       setIsDeleting(false);
       setDeletingItem(null);
     }
-
-    queryClient.invalidateQueries({ queryKey: ['header-categories'] });
   };
 
   const getItemType = (item: HeaderSubItem): string => {

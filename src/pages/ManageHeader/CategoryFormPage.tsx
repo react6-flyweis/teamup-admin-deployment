@@ -1,30 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { HeaderCategory } from '@/components/ManageHeader/types';
-import { initialMockData } from '@/components/ManageHeader/mockData';
 import { Chevron } from '@/assets/icons';
-import { useUpdateCategoryMutation, useCreateCategoryMutation } from '@/hooks/useHeaderCategories';
+import { useHeaderCategoriesQuery, useUpdateCategoryMutation, useCreateCategoryMutation } from '@/hooks/useHeaderCategories';
 
 const CategoryFormPage: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
   const [name, setName] = useState('');
+  const { data: categoriesData } = useHeaderCategoriesQuery();
   const createCategory = useCreateCategoryMutation();
   const updateCategory = useUpdateCategoryMutation();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (categoryId && categoryId !== 'new') {
-      const saved = localStorage.getItem('headerCategories');
-      if (saved) {
-        const categories: HeaderCategory[] = JSON.parse(saved);
-        const category = categories.find(c => c.id === categoryId);
-        if (category) {
-          setName(category.name);
-        }
+    if (categoryId && categoryId !== 'new' && categoriesData?.categories) {
+      const category = categoriesData.categories.find(c => c.id === categoryId);
+      if (category) {
+        setName(category.name);
       }
     }
-  }, [categoryId]);
+  }, [categoryId, categoriesData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,27 +33,12 @@ const CategoryFormPage: React.FC = () => {
       } else {
         await createCategory.mutateAsync(name.trim());
       }
+      navigate('/manage-header');
     } catch (err) {
       console.error('Error saving category:', err);
+    } finally {
+      setLoading(false);
     }
-
-    const saved = localStorage.getItem('headerCategories');
-    let categories: HeaderCategory[] = saved ? JSON.parse(saved) : initialMockData;
-
-    if (categoryId && categoryId !== 'new') {
-      categories = categories.map(c => c.id === categoryId ? { ...c, name: name.trim() } : c);
-    } else {
-      categories.push({
-        id: Date.now().toString(),
-        name: name.trim(),
-        isHidden: false,
-        subItems: []
-      });
-    }
-
-    localStorage.setItem('headerCategories', JSON.stringify(categories));
-    setLoading(false);
-    navigate('/manage-header');
   };
 
   return (

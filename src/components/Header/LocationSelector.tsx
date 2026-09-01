@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Chevron } from "../../assets/icons";
 import { useLocationsQuery } from "@/hooks/useLocations";
 import { useLocationStore } from "@/store/locationStore";
@@ -21,31 +21,49 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   const { data, isLoading } = useLocationsQuery();
   const [isOpen, setIsOpen] = useState(false);
   const { selectedLocation, setSelectedLocation } = useLocationStore();
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const locations = useMemo(() => data?.locations || [], [data?.locations]);
+  // Filter to only include active locations
+  const activeLocations = useMemo(
+    () => (data?.locations || []).filter((loc) => loc.isActive !== false),
+    [data?.locations]
+  );
 
-  // Automatically select the first location from the API once loaded
+  // Close dropdown on outside click
   useEffect(() => {
-    if (locations.length > 0 && !selectedLocation) {
-      setSelectedLocation(locations[0]);
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  // Automatically select the first active location, or update if the current selected location is not active
+  useEffect(() => {
+    if (activeLocations.length > 0) {
+      if (!selectedLocation || !activeLocations.some((loc) => loc._id === selectedLocation._id)) {
+        setSelectedLocation(activeLocations[0]);
+      }
     }
-  }, [locations, selectedLocation, setSelectedLocation]);
+  }, [activeLocations, selectedLocation, setSelectedLocation]);
 
   const displayText = selectedLocation
     ? `${selectedLocation.name}, ${selectedLocation.state}`
     : defaultLocation;
 
   return (
-    <div className={`relative flex flex-1 ${className}`}>
+    <div ref={containerRef} className={`relative flex flex-1 ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        disabled={isLoading}
+        disabled={isLoading || activeLocations.length === 0}
         className={`header-component flex flex-1 items-center justify-between h-14 ${buttonClassName} ${
-          isLoading ? "opacity-70 cursor-not-allowed" : ""
+          isLoading || activeLocations.length === 0 ? "opacity-70 cursor-not-allowed" : ""
         }`}
       >
         <span className="text-header">
-          {isLoading ? "Loading locations..." : displayText}
+          {isLoading ? "Loading locations..." : activeLocations.length === 0 ? "No active locations" : displayText}
         </span>
         <Chevron
           size={24}
@@ -56,12 +74,12 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
         />
       </button>
 
-      {isOpen && locations.length > 0 && (
+      {isOpen && activeLocations.length > 0 && (
         <div
           className={`absolute top-full left-0 mt-1 w-[290px] bg-white border border-neutral-200 rounded-lg shadow-lg z-50 ${dropdownClassName}`}
         >
           <div className="py-1">
-            {locations.map((loc) => {
+            {activeLocations.map((loc) => {
               const displayName = `${loc.name}, ${loc.state}`;
               return (
                 <button
@@ -84,5 +102,3 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
 };
 
 export default LocationSelector;
-
-

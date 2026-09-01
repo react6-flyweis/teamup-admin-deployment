@@ -7,10 +7,14 @@ import {
   useUpdateSocialReviewsMutation,
   type SocialReviewsData
 } from "@/hooks/useSocialReviews";
+import { useLocationStore } from "@/store/locationStore";
 
 const SocialReviews: React.FC = () => {
-  const { data, isLoading, error } = useSocialReviewsQuery();
-  const updateMutation = useUpdateSocialReviewsMutation();
+  const { selectedLocation } = useLocationStore();
+  const locationSlug = selectedLocation?.slug;
+
+  const { data, isLoading, error } = useSocialReviewsQuery(locationSlug);
+  const updateMutation = useUpdateSocialReviewsMutation(locationSlug);
 
   const [feedback, setFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
 

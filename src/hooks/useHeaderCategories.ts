@@ -46,6 +46,19 @@ export const useUpdateCategoryMutation = () => {
   });
 };
 
+export const useDeleteCategoryMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (categoryId: string) => {
+      const response = await apiClient.delete(`/menu-items/categories/${categoryId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+    },
+  });
+};
+
 export const useUpdateMenuItemMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -66,6 +79,26 @@ export const useUpdateMenuItemMutation = () => {
   });
 };
 
+
+export const useDeleteMenuItemMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, linkedItemId, type }: { id: string; linkedItemId?: string; type?: string }) => {
+      const response = await apiClient.delete(`/menu-items/${id}`);
+      if (linkedItemId) {
+        if (type === 'group-activity') await apiClient.delete(`/group-activities/${linkedItemId}`).catch(() => {});
+        else if (type === 'team-parties') await apiClient.delete(`/team-parties/${linkedItemId}`).catch(() => {});
+        else if (type === 'boom-bundle') await apiClient.delete(`/boom-bundles/${linkedItemId}`).catch(() => {});
+        else if (type === 'queens-night') await apiClient.delete(`/queens-nights/${linkedItemId}`).catch(() => {});
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-item'] });
+    },
+  });
+};
 
 export const useMenuItemQuery = (menuItemId?: string) => {
   return useQuery({
