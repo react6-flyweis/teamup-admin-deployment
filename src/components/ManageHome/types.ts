@@ -62,6 +62,16 @@ export interface NightsOut {
   buttonLink: string;
 }
 
+export interface NewsletterSection {
+  heading: string;
+  subheading: string;
+  backgroundImageUrl: string;
+  inputPlaceholder: string;
+  buttonText: string;
+  disclaimerText: string;
+  isActive: boolean;
+}
+
 export interface HomePageData {
   hero: HeroSection;
   bundles: BoomBundle[];
@@ -69,4 +79,5 @@ export interface HomePageData {
   games: GameItem[];
   bites: BitesAndDrinks;
   nightsOut: NightsOut;
+  newsletter?: NewsletterSection;
 }

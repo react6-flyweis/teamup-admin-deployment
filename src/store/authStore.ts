@@ -1,25 +1,29 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import apiClient from '@/utils/apiClient';
+import { queryClient } from '@/utils/queryClient';
+import type { User } from '@/types';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  role?: string;
-  isActive?: boolean;
-  isDeleted?: boolean;
-  newsletterSubscribed?: boolean;
+export interface SetAuthOptions {
+  accessTokenExpiresIn?: number;
+  refreshTokenExpiresAt?: string;
 }
 
 interface AuthState {
   user: User | null;
   accessToken: string | null;
+  accessTokenExpiresIn: number | null;
   refreshToken: string | null;
+  refreshTokenExpiresAt: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  setAuth: (user: User, accessToken: string, refreshToken?: string) => void;
+  setAuth: (
+    user: User,
+    accessToken: string,
+    refreshToken?: string,
+    options?: SetAuthOptions
+  ) => void;
+  updateUser: (user: Partial<User>) => void;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -29,37 +33,68 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       accessToken: null,
+      accessTokenExpiresIn: null,
       refreshToken: null,
+      refreshTokenExpiresAt: null,
       isAuthenticated: false,
       isLoading: false,
 
-      setAuth: (user, accessToken, refreshToken) => {
+      setAuth: (user, accessToken, refreshToken, options) => {
         set({
           user,
           accessToken,
           refreshToken: refreshToken || null,
+          accessTokenExpiresIn: options?.accessTokenExpiresIn ?? null,
+          refreshTokenExpiresAt: options?.refreshTokenExpiresAt ?? null,
           isAuthenticated: true,
           isLoading: false,
         });
+      },
+
+      updateUser: (updatedUser) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...updatedUser } : (updatedUser as User),
+        }));
       },
 
       logout: async () => {
         try {
           const refreshToken = get().refreshToken;
           // Best effort call to backend to invalidate session/cookies
-          await apiClient.post('/auth/logout', { refreshToken });
+          if (refreshToken) {
+            await apiClient.post('/auth/logout', { refreshToken });
+          }
         } catch (error) {
           console.warn('Backend logout failed or was unreachable:', error);
         } finally {
-          set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, isLoading: false });
-          // Redirect/Reload clears memory completely to avoid token leaks.
-          window.location.href = '/auth/login';
+          // Clear query cache to avoid showing stale cached user data
+          queryClient.clear();
+
+          set({
+            user: null,
+            accessToken: null,
+            accessTokenExpiresIn: null,
+            refreshToken: null,
+            refreshTokenExpiresAt: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+          // Note: AuthGuard automatically handles client-side redirection to /auth/login
+          // without triggering a secondary hard page reload.
         }
       },
 
       checkAuth: async () => {
         if (!get().accessToken) {
-          set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, isLoading: false });
+          set({
+            user: null,
+            accessToken: null,
+            accessTokenExpiresIn: null,
+            refreshToken: null,
+            refreshTokenExpiresAt: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
           return;
         }
 
@@ -74,7 +109,15 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch {
           // If token expired or invalid, clear everything
-          set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, isLoading: false });
+          set({
+            user: null,
+            accessToken: null,
+            accessTokenExpiresIn: null,
+            refreshToken: null,
+            refreshTokenExpiresAt: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
         }
       },
     }),
@@ -83,7 +126,9 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
+        accessTokenExpiresIn: state.accessTokenExpiresIn,
         refreshToken: state.refreshToken,
+        refreshTokenExpiresAt: state.refreshTokenExpiresAt,
         isAuthenticated: state.isAuthenticated,
       }),
     }
