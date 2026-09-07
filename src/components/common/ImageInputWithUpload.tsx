@@ -6,6 +6,7 @@ interface ImageInputWithUploadProps {
   value: string;
   onChange: (url: string) => void;
   label?: string;
+  hint?: string;
   placeholder?: string;
   accept?: string;
   className?: string;
@@ -21,6 +22,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   value,
   onChange,
   label,
+  hint,
   placeholder = 'Paste image URL or click upload',
   accept = 'image/*',
   className = '',
@@ -60,7 +62,12 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
     <div className={className}>
       {label && (
         <label className={labelClassName || "block text-xs text-gray-400 mb-1 font-medium"}>
-          {label}
+          <span>{label}</span>
+          {hint && (
+            <span className="text-[11px] text-gray-400 font-normal ml-1.5">
+              ({hint})
+            </span>
+          )}
         </label>
       )}
       <div className="flex gap-2 items-center">

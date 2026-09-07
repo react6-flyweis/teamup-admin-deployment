@@ -169,7 +169,9 @@ const SimpleLinkModal: React.FC<SimpleLinkModalProps> = ({
           </div>
 
           <div>
-            <label className={labelCls}>Nav Icon (Optional)</label>
+            <label className={labelCls}>
+              Nav Icon (Optional) <span className="text-xs text-gray-400 font-normal ml-1.5">(1:1 Square • Rec: 160×160 px • SVG/PNG)</span>
+            </label>
             <div className="flex items-center gap-4">
               <div className="relative">
                 {icon ? (

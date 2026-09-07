@@ -186,6 +186,7 @@ const BoomBundlesForm: React.FC<BoomBundlesFormProps> = ({ initialData, onSave, 
 
               <ImageInputWithUpload
                 label="Bundle Image"
+                hint="3:2 • Rec: 1200×800 px"
                 value={formData.imageUrl}
                 onChange={(url) => setFormData({ ...formData, imageUrl: url })}
                 placeholder="/uploads/boom-bundles.jpg or https://..."

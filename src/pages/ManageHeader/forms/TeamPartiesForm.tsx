@@ -166,7 +166,9 @@ const TeamPartiesForm: React.FC<TeamPartiesFormProps> = ({
               </div>
               {/* Icon upload */}
               <div>
-                <label className={labelCls}>Nav Icon (shown in header bar)</label>
+                <label className={labelCls}>
+                  Nav Icon (shown in header bar) <span className="text-xs text-gray-400 font-normal ml-1.5">(1:1 Square • Rec: 160×160 px • SVG/PNG)</span>
+                </label>
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     {icon ? (
@@ -203,7 +205,9 @@ const TeamPartiesForm: React.FC<TeamPartiesFormProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Hero Background Image</label>
+                  <label className={labelCls}>
+                    Hero Background Image <span className="text-xs text-gray-400 font-normal ml-1.5">(16:9 to 21:9 • Rec: 1905×805 or 1920×1080 px)</span>
+                  </label>
                   <div className="flex items-center gap-4">
                     {pageHeroImage ? (
                       <div className="relative group w-40 h-20 rounded-lg overflow-hidden border border-[#3A3530]">
@@ -284,7 +288,8 @@ const TeamPartiesForm: React.FC<TeamPartiesFormProps> = ({
                           </div>
                         </div>
                         <ImageInputWithUpload
-                          label="Image URL"
+                          label="Package Badge / Image URL"
+                          hint="1:1 or 4:3 • Rec: 300×300 px • SVG/PNG"
                           value={item.image || ''}
                           onChange={(url) => updateChecklistItem(item.id, 'image', url)}
                           placeholder="Paste image URL here"
@@ -371,6 +376,7 @@ const TeamPartiesForm: React.FC<TeamPartiesFormProps> = ({
                         </div>
                         <ImageInputWithUpload
                           label="Featured Image URL"
+                          hint="1:1 Square • Rec: 1000×1000 px"
                           value={event.image}
                           onChange={(url) => updateFeaturedEvent(event.id, 'image', url)}
                           placeholder="Paste image URL here"

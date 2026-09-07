@@ -88,7 +88,7 @@ const CardModal: React.FC<CardModalProps> = ({
             {/* Image Upload */}
             <div className="mb-6">
               <label className="block text-sm font-medium mb-1">
-                Image
+                Image <span className="text-xs text-gray-500 font-normal ml-1">(1:1 Square • Rec: 800×800 px)</span>
               </label>
               <div className="border border-dashed border-black rounded-lg p-4 h-[218px] relative bg-white">
                 {formData.image ? (

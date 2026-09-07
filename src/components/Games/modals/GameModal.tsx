@@ -324,7 +324,7 @@ const GameModal: React.FC<GameModalProps> = ({
           <div className="grid grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-medium text-black mb-1">
-                Add Game Icon
+                Add Game Icon <span className="text-xs text-gray-500 font-normal ml-1">(1:1 Square • Rec: 160×160 px • SVG/PNG)</span>
               </label>
               {!formData.gameIcon ? (
                 <div
@@ -394,7 +394,7 @@ const GameModal: React.FC<GameModalProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-black mb-1">
-                Add Card Image
+                Add Card Image <span className="text-xs text-gray-500 font-normal ml-1">(1:1 Square • Rec: 800×800 px)</span>
               </label>
               {!formData.cardImage ? (
                 <div
@@ -435,9 +435,9 @@ const GameModal: React.FC<GameModalProps> = ({
                   >
                     <img
                       src={formData.cardImage}
-                      alt="Card Image"
-                      className="object-contain rounded"
-                      style={{ maxHeight: 140, maxWidth: 164 }}
+                      alt="Card"
+                      className="h-[90px] object-contain rounded"
+                      style={{ maxWidth: 164 }}
                     />
                   </div>
                   <div className="flex justify-end pt-2">
@@ -467,7 +467,7 @@ const GameModal: React.FC<GameModalProps> = ({
           {/* Banner - with inner Select and outer Change */}
           <div>
             <label className="block text-sm font-medium text-black mb-1">
-              Add Game Banner Photo
+              Add Game Banner Photo <span className="text-xs text-gray-500 font-normal ml-1">(16:9 • Rec: 1920×1080 or 2560×1440 px)</span>
             </label>
             {!formData.bannerPhoto ? (
               <div

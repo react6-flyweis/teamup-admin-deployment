@@ -239,7 +239,9 @@ const AddEditFoodItemsModal: React.FC<AddEditModalProps> = ({
 
           {/* Image Upload */}
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Item Image (optional)</label>
+            <label className="block text-sm font-medium text-black mb-1">
+              Item Image (optional) <span className="text-xs text-gray-500 font-normal ml-1">(1:1 or 4:3 • Rec: 600×600 px)</span>
+            </label>
             <div className="border border-dashed border-black rounded-lg p-4 text-center bg-white">
               {image ? (
                 <div className="flex flex-col items-center gap-4">

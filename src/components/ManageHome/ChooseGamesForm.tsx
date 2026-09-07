@@ -296,6 +296,7 @@ const ChooseGamesForm: React.FC<ChooseGamesFormProps> = ({ initialData, onSave, 
 
               <ImageInputWithUpload
                 label="Game Image"
+                hint="1:1 Square • Rec: 800×800 px"
                 value={formData.imageUrl}
                 onChange={(url) => setFormData({ ...formData, imageUrl: url })}
                 placeholder="/uploads/indoor-mini-golf.jpg or https://..."
