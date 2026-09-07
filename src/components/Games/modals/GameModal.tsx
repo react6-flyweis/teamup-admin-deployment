@@ -360,15 +360,17 @@ const GameModal: React.FC<GameModalProps> = ({
               ) : (
                 <>
                   <div
-                    className="border border-dashed border-[#4A4A4A] rounded-lg bg-white w-full flex items-center justify-center"
-                    style={{ minHeight: 90, height:140 }}
+                    className="border border-dashed border-[#4A4A4A] rounded-lg bg-white w-full flex items-center justify-center p-2"
+                    style={{ height: 140 }}
                   >
-                    <img
-                      src={formData.gameIcon}
-                      alt="Game Icon"
-                      className="object-contain rounded"
-                      style={{ maxHeight: 140, maxWidth: 164 }}
-                    />
+                    <div className="h-full aspect-square relative rounded overflow-hidden flex items-center justify-center bg-gray-50 border border-gray-200">
+                      <img
+                        src={formData.gameIcon}
+                        alt="Game Icon"
+                        className="w-full h-full object-contain p-1"
+                      />
+                      <span className="absolute bottom-1 right-1 px-1 py-0.2 text-[9px] rounded bg-black/75 text-white font-mono pointer-events-none">1:1</span>
+                    </div>
                   </div>
                   <div className="flex justify-end pt-2">
                     <input
@@ -402,7 +404,7 @@ const GameModal: React.FC<GameModalProps> = ({
                   style={{ minHeight: 90, height: 140 }}
                   onClick={() => cardRef.current?.click()}
                 >
-                  <span className="font-[500] text-[#323232] text-base mb-1">
+                  <span className="font-medium text-[#323232] text-base mb-1">
                     Upload your Card Image
                   </span>
                   <UploadIcon className="w-8 h-8 text-[#C3C3C3]" />
@@ -430,15 +432,17 @@ const GameModal: React.FC<GameModalProps> = ({
               ) : (
                 <>
                   <div
-                    className="border border-dashed border-[#4A4A4A] rounded-lg bg-white w-full flex items-center justify-center"
-                    style={{ minHeight: 90, height: 140 }}
+                    className="border border-dashed border-[#4A4A4A] rounded-lg bg-white w-full flex items-center justify-center p-2"
+                    style={{ height: 140 }}
                   >
-                    <img
-                      src={formData.cardImage}
-                      alt="Card"
-                      className="h-[90px] object-contain rounded"
-                      style={{ maxWidth: 164 }}
-                    />
+                    <div className="h-full aspect-square relative rounded overflow-hidden flex items-center justify-center bg-gray-50 border border-gray-200">
+                      <img
+                        src={formData.cardImage}
+                        alt="Card"
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute bottom-1 right-1 px-1 py-0.2 text-[9px] rounded bg-black/75 text-white font-mono pointer-events-none">1:1</span>
+                    </div>
                   </div>
                   <div className="flex justify-end pt-2">
                     <input
@@ -475,7 +479,7 @@ const GameModal: React.FC<GameModalProps> = ({
                 style={{ minHeight: 110, height: 180 }}
                 onClick={() => bannerRef.current?.click()}
               >
-                <span className="font-[500] text-[#323232] text-base mb-1 mt-1.5">
+                <span className="font-medium text-[#323232] text-base mb-1 mt-1.5">
                   Upload your game icon here
                 </span>
                 <UploadIcon className="w-8 h-8 text-[#C3C3C3]" />
@@ -506,15 +510,17 @@ const GameModal: React.FC<GameModalProps> = ({
             ) : (
               <>
                 <div
-                  className="border border-dashed border-[#4A4A4A] rounded-lg bg-white w-full flex items-center justify-center"
-                  style={{ minHeight: 110, height: 180 }}
+                  className="border border-dashed border-[#4A4A4A] rounded-lg bg-white w-full flex items-center justify-center p-2"
+                  style={{ height: 180 }}
                 >
-                  <img
-                    src={formData.bannerPhoto}
-                    alt="Banner"
-                    className="h-[90px] object-contain rounded"
-                    style={{ maxWidth: "full" }}
-                  />
+                  <div className="h-full aspect-video relative rounded overflow-hidden flex items-center justify-center bg-gray-50 border border-gray-200">
+                    <img
+                      src={formData.bannerPhoto}
+                      alt="Banner"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute bottom-1 right-1 px-1.5 py-0.5 text-[10px] rounded bg-black/75 text-white font-mono pointer-events-none">16:9</span>
+                  </div>
                 </div>
                 <div className="flex justify-end pt-2">
                   <input
