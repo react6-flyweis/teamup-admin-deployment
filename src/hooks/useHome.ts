@@ -72,12 +72,30 @@ export interface BitesEventsData {
   nightsOut: NightsOutData;
 }
 
+export interface NewsletterSectionData {
+  title?: string;
+  heading?: string;
+  subtitle?: string;
+  subheading?: string;
+  description?: string;
+  body?: string;
+  backgroundImageUrl?: string;
+  backgroundMediaUrl?: string;
+  inputPlaceholder?: string;
+  buttonText?: string;
+  disclaimerText?: string;
+  footerText?: string;
+  isActive?: boolean;
+}
+
 export interface HomeData {
   topBanner?: TopBannerData;
   hero?: HeroData;
   boomBundles?: BoomBundlesData;
   chooseGameSection?: ChooseGameSectionData;
   bitesEvents?: BitesEventsData;
+  newsletter?: NewsletterSectionData;
+  signUp?: NewsletterSectionData;
 }
 
 export interface HomeContent {

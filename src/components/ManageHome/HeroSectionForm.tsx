@@ -165,10 +165,13 @@ const HeroSectionForm: React.FC<HeroSectionFormProps> = ({ initialData, onSave, 
         <div className="space-y-6">
           {/* Background Video */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Background Media (Image or Video)</label>
+            <label className="block text-sm text-gray-400 mb-2">
+              Background Media (Image or Video) <span className="text-xs text-gray-400 font-normal ml-1.5">(16:9 • Rec: 1920×1080 or 2560×1440 px • WebP/JPG/MP4)</span>
+            </label>
             <FileUploader
               value={data.backgroundMediaUrl}
               onChange={(url) => setData({ ...data, backgroundMediaUrl: url })}
+              aspectRatio="16:9"
             />
             <input
               type="text"

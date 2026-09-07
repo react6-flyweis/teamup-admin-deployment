@@ -151,7 +151,9 @@ const GroupActivityForm: React.FC<GroupActivityFormProps> = ({
               </div>
               {/* Icon upload */}
               <div>
-                <label className={labelCls}>Nav Icon (shown in header bar)</label>
+                <label className={labelCls}>
+                  Nav Icon (shown in header bar) <span className="text-xs text-gray-400 font-normal ml-1.5">(1:1 Square • Rec: 160×160 px • SVG/PNG)</span>
+                </label>
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     {icon ? (
@@ -188,15 +190,18 @@ const GroupActivityForm: React.FC<GroupActivityFormProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Hero Background Image</label>
+                  <label className={labelCls}>
+                    Hero Background Image <span className="text-xs text-gray-400 font-normal ml-1.5">(16:9 to 21:9 • Rec: 1905×805 or 1920×1080 px)</span>
+                  </label>
                   <div className="flex items-center gap-4">
                     {pageHeroImage ? (
-                      <div className="relative group w-40 h-20 rounded-lg overflow-hidden border border-[#3A3530]">
+                      <div className="relative group w-44 aspect-video rounded-lg overflow-hidden border border-[#3A3530]">
                         <img src={pageHeroImage} alt="hero" className="w-full h-full object-cover" />
                         <button type="button" onClick={() => setPageHeroImage('')} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"><CloseIcon /></button>
+                        <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-gray-300 font-mono pointer-events-none">16:9</span>
                       </div>
                     ) : (
-                      <button type="button" onClick={() => heroImageRef.current?.click()} className="w-40 h-20 rounded-lg bg-[#2A2A2A] border border-dashed border-[#3A3530] hover:border-[#E1017D] flex flex-col items-center justify-center text-gray-500 hover:text-[#E1017D] transition-colors">
+                      <button type="button" onClick={() => heroImageRef.current?.click()} className="w-44 aspect-video rounded-lg bg-[#2A2A2A] border border-dashed border-[#3A3530] hover:border-[#E1017D] flex flex-col items-center justify-center text-gray-500 hover:text-[#E1017D] transition-colors">
                         <UploadIcon /><span className="text-xs mt-1">Upload Hero</span>
                       </button>
                     )}

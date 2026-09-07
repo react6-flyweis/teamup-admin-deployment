@@ -337,7 +337,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
     <div>
       <div className="bg-[#1C1C1C] rounded-xl border border-[#3A3530] w-full max-w-4xl overflow-hidden flex flex-col mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#3A3530] flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-[#3A3530] shrink-0">
           <h2 className="text-lg font-semibold text-white">
             {initialData ? 'Edit Sub-item / Game' : 'Add Sub-item / Game'}
           </h2>
@@ -411,7 +411,9 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
 
             {/* Icon */}
             <div>
-              <label className={labelCls}>Navigation Icon</label>
+              <label className={labelCls}>
+                Navigation Icon <span className="text-xs text-gray-400 font-normal ml-1.5">(1:1 Square • Rec: 160×160 px • SVG/PNG)</span>
+              </label>
               <div className="flex items-center gap-4">
                 {icon ? (
                   <div className="relative group w-16 h-16 rounded-lg bg-[#2A2A2A] border border-[#3A3530] overflow-hidden flex items-center justify-center">
@@ -454,16 +456,19 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
                 <input type="text" value={heroBookNowLink} onChange={e => setHeroBookNowLink(e.target.value)} placeholder="e.g. /book/birthday" className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Hero Image</label>
+                <label className={labelCls}>
+                  Hero Image <span className="text-xs text-gray-400 font-normal ml-1.5">(16:9 • Rec: 1920×1080 or 2560×1440 px)</span>
+                </label>
                 <div className="flex items-center gap-4">
                   {pageHeroImage ? (
-                    <div className="relative group w-32 h-16 rounded-lg bg-[#2A2A2A] border border-[#3A3530] overflow-hidden flex items-center justify-center">
+                    <div className="relative group w-44 aspect-video rounded-lg bg-[#2A2A2A] border border-[#3A3530] overflow-hidden flex items-center justify-center">
                       <img src={pageHeroImage} alt="Hero" className="w-full h-full object-cover" />
                       <button type="button" onClick={() => setPageHeroImage('')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><CloseIcon /></button>
+                      <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-gray-300 font-mono pointer-events-none">16:9</span>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => heroImageRef.current?.click()} className="w-32 h-16 rounded-lg bg-[#2A2A2A] border border-dashed border-[#3A3530] hover:border-[#FB3748] hover:text-[#FB3748] flex flex-col items-center justify-center text-gray-500 transition-colors">
-                      <UploadIcon /><span className="text-[10px] mt-1">Upload</span>
+                    <button type="button" onClick={() => heroImageRef.current?.click()} className="w-44 aspect-video rounded-lg bg-[#2A2A2A] border border-dashed border-[#3A3530] hover:border-[#FB3748] hover:text-[#FB3748] flex flex-col items-center justify-center text-gray-500 transition-colors">
+                      <UploadIcon /><span className="text-[10px] mt-1">Upload Hero</span>
                     </button>
                   )}
                   <div className="flex-1">
@@ -517,7 +522,9 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
                         <div className="grid grid-cols-2 gap-3">
                           <div><label className={labelSmCls}>Title</label><input type="text" value={game.title} onChange={e => updateOtherGame(index, 'title', e.target.value)} placeholder="e.g. DUCKPIN BOWLING" className={inputSmCls} /></div>
                           <div>
-                            <label className={labelSmCls}>Image</label>
+                            <label className={labelSmCls}>
+                              Image <span className="text-[11px] text-gray-400 font-normal ml-1">(1:1 Square • Rec: 800×800 px)</span>
+                            </label>
                             <div className="flex items-center gap-2">
                               {game.image && <img src={game.image} alt="" className="w-10 h-10 object-cover rounded border border-[#3A3530]" />}
                               <div className="flex-1 relative">
@@ -618,7 +625,9 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
                         <div className="grid grid-cols-2 gap-3">
                           <div><label className={labelSmCls}>Card Title</label><input type="text" value={card.title} onChange={e => updateChooseGameCard(index, 'title', e.target.value)} placeholder="e.g. AXE THROW" className={inputSmCls} /></div>
                           <div>
-                            <label className={labelSmCls}>Card Image</label>
+                            <label className={labelSmCls}>
+                              Card Image <span className="text-[11px] text-gray-400 font-normal ml-1">(1:1 Square • Rec: 800×800 px)</span>
+                            </label>
                             <div className="flex items-center gap-2">
                               {card.image && <img src={card.image} alt="" className="w-10 h-10 object-cover rounded border border-[#3A3530]" />}
                               <div className="flex-1 relative">

@@ -111,7 +111,7 @@ const BoomBundlesForm: React.FC<BoomBundlesFormProps> = ({ initialData, onSave, 
         {bundles.map((bundle) => (
           <div key={bundle.id} className={`p-4 rounded-lg border ${bundle.isActive ? 'border-[#3A3530] bg-[#222222]' : 'border-gray-800 bg-[#1A1A1A] opacity-75'}`}>
             <div className="flex gap-4">
-              <img src={bundle.imageUrl} alt={bundle.title} className="w-32 h-24 object-cover rounded bg-gray-800" />
+              <img src={bundle.imageUrl} alt={bundle.title} className="w-36 aspect-[3/2] object-cover rounded bg-gray-800" />
               <div className="flex-1">
                 <h4 className={`text-lg font-medium mb-1 ${bundle.isActive ? 'text-white' : 'text-gray-500'}`}>{bundle.title}</h4>
                 <p className="text-sm text-gray-400 mb-2 line-clamp-2">{bundle.description}</p>
@@ -186,6 +186,7 @@ const BoomBundlesForm: React.FC<BoomBundlesFormProps> = ({ initialData, onSave, 
 
               <ImageInputWithUpload
                 label="Bundle Image"
+                hint="3:2 • Rec: 1200×800 px"
                 value={formData.imageUrl}
                 onChange={(url) => setFormData({ ...formData, imageUrl: url })}
                 placeholder="/uploads/boom-bundles.jpg or https://..."

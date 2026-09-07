@@ -53,6 +53,16 @@ apiClient.interceptors.response.use(
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      // Do not attempt token refresh or recursive logout on auth endpoints
+      const requestUrl = originalRequest.url || '';
+      if (
+        requestUrl.includes('/auth/logout') ||
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/refresh')
+      ) {
+        return Promise.reject(error);
+      }
+
       const refreshToken = useAuthStore.getState().refreshToken;
       if (!refreshToken) {
         useAuthStore.getState().logout();
@@ -88,8 +98,17 @@ apiClient.interceptors.response.use(
           }
         );
 
-        const { accessToken, refreshToken: newRefreshToken, user } = response.data;
-        useAuthStore.getState().setAuth(user, accessToken, newRefreshToken);
+        const {
+          accessToken,
+          refreshToken: newRefreshToken,
+          user,
+          accessTokenExpiresIn,
+          refreshTokenExpiresAt,
+        } = response.data;
+        useAuthStore.getState().setAuth(user, accessToken, newRefreshToken, {
+          accessTokenExpiresIn,
+          refreshTokenExpiresAt,
+        });
 
         processQueue(null, accessToken);
 

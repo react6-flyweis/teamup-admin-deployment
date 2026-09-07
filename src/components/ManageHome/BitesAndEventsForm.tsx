@@ -39,6 +39,7 @@ const BitesAndEventsForm: React.FC<BitesAndEventsFormProps> = ({ initialBites, i
               </div>
               <ImageInputWithUpload
                 label="Bites Image"
+                hint="16:10 • Rec: 1200×730 px"
                 value={bites.bitesImageUrl}
                 onChange={(url) => setBites({ ...bites, bitesImageUrl: url })}
                 placeholder="Paste image URL or upload"
@@ -61,6 +62,7 @@ const BitesAndEventsForm: React.FC<BitesAndEventsFormProps> = ({ initialBites, i
               </div>
               <ImageInputWithUpload
                 label="Drinks Image"
+                hint="16:10 • Rec: 1200×730 px"
                 value={bites.drinksImageUrl}
                 onChange={(url) => setBites({ ...bites, drinksImageUrl: url })}
                 placeholder="Paste image URL or upload"
@@ -81,6 +83,7 @@ const BitesAndEventsForm: React.FC<BitesAndEventsFormProps> = ({ initialBites, i
         <div className="space-y-4 max-w-2xl">
           <ImageInputWithUpload
             label="Background Media (Image or Video)"
+            hint="2:1 • Rec: 2400×1200 px"
             value={nightsOut.backgroundMediaUrl}
             onChange={(url) => setNightsOut({ ...nightsOut, backgroundMediaUrl: url })}
             placeholder="Paste media URL or upload"

@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import apiClient from '@/utils/apiClient';
+import type { LoginResponse } from '@/types';
 import * as z from 'zod';
 
 export const loginSchema = z.object({
@@ -15,13 +16,16 @@ export const useLoginMutation = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
 
-  return useMutation({
-    mutationFn: async (data: LoginSchema) => {
-      const response = await apiClient.post('/auth/login', data);
+  return useMutation<LoginResponse, Error, LoginSchema>({
+    mutationFn: async (data: LoginSchema): Promise<LoginResponse> => {
+      const response = await apiClient.post<LoginResponse>('/auth/login', data);
       return response.data;
     },
     onSuccess: (data) => {
-      setAuth(data.user, data.accessToken, data.refreshToken);
+      setAuth(data.user, data.accessToken, data.refreshToken, {
+        accessTokenExpiresIn: data.accessTokenExpiresIn,
+        refreshTokenExpiresAt: data.refreshTokenExpiresAt,
+      });
       navigate('/');
     },
   });
@@ -45,33 +49,27 @@ export const useRegisterMutation = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
 
-  return useMutation({
-    mutationFn: async (data: Omit<RegisterSchema, 'confirmPassword'>) => {
-      const response = await apiClient.post('/auth/register', data);
+  return useMutation<LoginResponse, Error, Omit<RegisterSchema, 'confirmPassword'>>({
+    mutationFn: async (data: Omit<RegisterSchema, 'confirmPassword'>): Promise<LoginResponse> => {
+      const response = await apiClient.post<LoginResponse>('/auth/register', data);
       return response.data;
     },
     onSuccess: (data) => {
-      setAuth(data.user, data.accessToken, data.refreshToken);
+      setAuth(data.user, data.accessToken, data.refreshToken, {
+        accessTokenExpiresIn: data.accessTokenExpiresIn,
+        refreshTokenExpiresAt: data.refreshTokenExpiresAt,
+      });
       navigate('/');
     },
   });
 };
 
 export const useLogoutMutation = () => {
-  const navigate = useNavigate();
   const { logout } = useAuthStore();
 
   return useMutation({
     mutationFn: async () => {
-      try {
-        await apiClient.post('/auth/logout');
-      } catch (err) {
-        console.warn('Logout API error:', err);
-      }
-    },
-    onSettled: () => {
-      logout();
-      navigate('/login');
+      await logout();
     },
   });
 };

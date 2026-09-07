@@ -300,14 +300,8 @@
     font-family: var(--font-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
   }
 
-  body::-webkit-scrollbar,
-  *::-webkit-scrollbar {
-    display: none;
-  }
 
   /* Typography Reset */
   h1, h2, h3, h4, h5, h6 {
@@ -1261,7 +1255,8 @@
     justify-content: flex-end;
     align-items: center;
     gap: var(--space-3);
-    width: 9.25rem; /* 148px */
+    width: auto;
+    min-width: fit-content;
     height: 3.5rem; /* 56px */
   }
 
@@ -1316,11 +1311,24 @@
     }
   }
 }
-/* Hide browser calendar icon for input[type=date] and clock for input[type=time] */
+/* Hide browser calendar icon for input[type=date] and clock for input[type=time] by default */
 input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator {
+input[type="time"]:not(.show-time-selector)::-webkit-calendar-picker-indicator {
   opacity: 0;
   display: none;
+}
+
+/* Explicit time selector style for input[type=time].show-time-selector */
+input[type="time"].show-time-selector::-webkit-calendar-picker-indicator {
+  display: block;
+  opacity: 1;
+  cursor: pointer;
+  filter: invert(0.85);
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+input[type="time"].show-time-selector::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) brightness(1.2);
 }
 
 input[type="date"],
@@ -1328,3 +1336,106 @@ input[type="time"] {
   /* Edge/Firefox */
   position: relative;
 }
+
+/* ==========================================================================
+   SCROLLBAR SYSTEM
+   ========================================================================== */
+
+/* Main / Global Scrollbar (for page window and scrollable containers) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1C1819;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3A3530;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #524C46;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #69625A;
+}
+
+::-webkit-scrollbar-corner {
+  background: #1C1819;
+}
+
+/* Firefox standard scrollbars */
+html,
+body {
+  scrollbar-width: thin;
+  scrollbar-color: #3A3530 #1C1819;
+}
+
+/* Thin Scrollbar for Sidebar */
+.sidebar-scrollbar::-webkit-scrollbar,
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track,
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb,
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #3A3530;
+  border-radius: 9999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover,
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #524C46;
+}
+
+.sidebar-scrollbar,
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #3A3530 transparent;
+}
+
+/* Custom Scrollbar (used in modals and lists) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(28, 24, 25, 0.5);
+  border-radius: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3A3530;
+  border-radius: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #524C46;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3A3530 transparent;
+}
+
+/* Utility to explicitly hide scrollbar when needed */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
