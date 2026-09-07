@@ -113,5 +113,14 @@ export const mockHomePageData: HomePageData = {
     backgroundMediaUrl: 'https://images.unsplash.com/photo-1545128485-c400e7702796?q=80&w=2000&auto=format&fit=crop',
     buttonText: 'EXPLORE EVENTS',
     buttonLink: '/events',
+  },
+  newsletter: {
+    heading: 'SIGN UP OR SHUFF UP',
+    subheading: 'NO FOMO NEEDED. BE THE FIRST TO RECEIVE NEWS AND UPDATES ABOUT BOOM BATTLE BAR OXFORD STREET.',
+    backgroundImageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=2000&auto=format&fit=crop',
+    inputPlaceholder: 'Your email address*',
+    buttonText: 'SIGN UP',
+    disclaimerText: 'By signing up you will be added to our mailing list and receive news, offers and promotions from BOOM BATTLE BAR and our sister brand Escape Hunt by email & SMS. Your information will be used in accordance with our Privacy Policy.',
+    isActive: true,
   }
 };
