@@ -1,4 +1,3 @@
-
 export interface IconProps {
   size?: number;
   color?: string;
@@ -6,3 +5,4 @@ export interface IconProps {
   isActive?: boolean;
 }
 
+export * from './auth';
