@@ -54,20 +54,20 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     : defaultLocation;
 
   return (
-    <div ref={containerRef} className={`relative flex flex-1 ${className}`}>
+    <div ref={containerRef} className={`relative flex flex-1 grow min-w-[200px] ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading || activeLocations.length === 0}
-        className={`header-component flex flex-1 items-center justify-between h-14 ${buttonClassName} ${
+        className={`header-component flex w-full items-center justify-between gap-4 h-14 ${buttonClassName} ${
           isLoading || activeLocations.length === 0 ? "opacity-70 cursor-not-allowed" : ""
         }`}
       >
-        <span className="text-header">
+        <span className="text-header whitespace-nowrap">
           {isLoading ? "Loading locations..." : activeLocations.length === 0 ? "No active locations" : displayText}
         </span>
         <Chevron
           size={24}
-          className={`transition-transform duration-200 ${
+          className={`transition-transform duration-200 shrink-0 ${
             isOpen ? "rotate-180" : ""
           }`}
           color="#292D32"
