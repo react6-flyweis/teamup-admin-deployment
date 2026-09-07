@@ -461,13 +461,14 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
                 </label>
                 <div className="flex items-center gap-4">
                   {pageHeroImage ? (
-                    <div className="relative group w-32 h-16 rounded-lg bg-[#2A2A2A] border border-[#3A3530] overflow-hidden flex items-center justify-center">
+                    <div className="relative group w-44 aspect-video rounded-lg bg-[#2A2A2A] border border-[#3A3530] overflow-hidden flex items-center justify-center">
                       <img src={pageHeroImage} alt="Hero" className="w-full h-full object-cover" />
                       <button type="button" onClick={() => setPageHeroImage('')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><CloseIcon /></button>
+                      <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-gray-300 font-mono pointer-events-none">16:9</span>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => heroImageRef.current?.click()} className="w-32 h-16 rounded-lg bg-[#2A2A2A] border border-dashed border-[#3A3530] hover:border-[#FB3748] hover:text-[#FB3748] flex flex-col items-center justify-center text-gray-500 transition-colors">
-                      <UploadIcon /><span className="text-[10px] mt-1">Upload</span>
+                    <button type="button" onClick={() => heroImageRef.current?.click()} className="w-44 aspect-video rounded-lg bg-[#2A2A2A] border border-dashed border-[#3A3530] hover:border-[#FB3748] hover:text-[#FB3748] flex flex-col items-center justify-center text-gray-500 transition-colors">
+                      <UploadIcon /><span className="text-[10px] mt-1">Upload Hero</span>
                     </button>
                   )}
                   <div className="flex-1">
