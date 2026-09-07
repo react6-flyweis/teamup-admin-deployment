@@ -1,7 +1,7 @@
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import Register from "@/pages/Register";
-// import Dashboard from "./pages/Dashboard";
 import ManageHome from "@/pages/ManageHome";
 import ManageHeader from "@/pages/ManageHeader";
 import ManageFooter from "@/pages/ManageFooter";
@@ -26,8 +26,35 @@ import StaffDetail from "./pages/StaffDetail";
 import Venues from "./pages/Venues";
 import SocialReviews from "./pages/SocialReviews";
 import Enquiries from "@/pages/Enquiries";
+import RolesPermissions from "@/pages/RolesPermissions";
+import AdminUsers from "@/pages/AdminUsers";
+import ProfileSettings from "@/pages/ProfileSettings";
 import NotFound from "@/pages/NotFound";
 import { AuthGuard } from "@/components/AuthGuard";
+import { PermissionGuard } from "@/components/PermissionGuard";
+import { usePermissions } from "@/hooks/usePermissions";
+import { navigationItems } from "@/config/navigation";
+import { ROLES } from "@/types";
+
+const DefaultRedirect: React.FC = () => {
+  const { canAccessTab, isSuperAdmin } = usePermissions();
+
+  if (isSuperAdmin || canAccessTab("manage_home")) {
+    return <Navigate to="/manage-home" replace />;
+  }
+
+  const firstAllowed = navigationItems.find((item) => {
+    if (item.tabId && canAccessTab(item.tabId)) return true;
+    if (item.permission && canAccessTab(item.permission)) return true;
+    return canAccessTab(item.id);
+  });
+
+  if (firstAllowed) {
+    return <Navigate to={firstAllowed.path} replace />;
+  }
+
+  return <Navigate to="/manage-home" replace />;
+};
 
 function App() {
   return (
@@ -40,30 +67,167 @@ function App() {
         {/* Dashboard Routes - With Layout & Protected by AuthGuard */}
         <Route element={<AuthGuard />}>
           <Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/manage-home" replace />} />
-            <Route path="manage-home" element={<ManageHome />} />
-            <Route path="manage-header" element={<ManageHeader />} />
-            <Route path="manage-header/category/:categoryId" element={<CategoryFormPage />} />
-            <Route path="manage-header/:categoryId/game/:subItemId" element={<GameFormPage />} />
-            <Route path="manage-header/:categoryId/group-activity/:subItemId" element={<GroupActivityFormPage />} />
-            <Route path="manage-header/:categoryId/team-parties/:subItemId" element={<TeamPartiesFormPage />} />
-            <Route path="manage-header/:categoryId/boom-bundle/:subItemId" element={<BoomBundleFormPage />} />
-            <Route path="manage-header/:categoryId/queens-night/:subItemId" element={<QueensNightFormPage />} />
-            <Route path="manage-footer" element={<ManageFooter />} />
-            <Route path="game-venue" element={<Games />} />
-            <Route path="food-drinks" element={<Bites />} />
-            <Route path="bookings" element={<Bookings />} />
+            <Route index element={<DefaultRedirect />} />
+            <Route
+              path="manage-home"
+              element={
+                <PermissionGuard tabId="manage_home">
+                  <ManageHome />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="manage-header"
+              element={
+                <PermissionGuard tabId="manage_header">
+                  <ManageHeader />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="manage-header/category/:categoryId"
+              element={
+                <PermissionGuard tabId="manage_header">
+                  <CategoryFormPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="manage-header/:categoryId/game/:subItemId"
+              element={
+                <PermissionGuard tabId="manage_header">
+                  <GameFormPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="manage-header/:categoryId/group-activity/:subItemId"
+              element={
+                <PermissionGuard tabId="manage_header">
+                  <GroupActivityFormPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="manage-header/:categoryId/team-parties/:subItemId"
+              element={
+                <PermissionGuard tabId="manage_header">
+                  <TeamPartiesFormPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="manage-header/:categoryId/boom-bundle/:subItemId"
+              element={
+                <PermissionGuard tabId="manage_header">
+                  <BoomBundleFormPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="manage-header/:categoryId/queens-night/:subItemId"
+              element={
+                <PermissionGuard tabId="manage_header">
+                  <QueensNightFormPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="manage-footer"
+              element={
+                <PermissionGuard tabId="manage_footer">
+                  <ManageFooter />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="game-venue"
+              element={
+                <PermissionGuard tabId="game_venue">
+                  <Games />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="food-drinks"
+              element={
+                <PermissionGuard tabId="bites_drinks">
+                  <Bites />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="bookings"
+              element={
+                <PermissionGuard tabId="bookings">
+                  <Bookings />
+                </PermissionGuard>
+              }
+            />
             <Route path="payments" element={<Payments />} />
             <Route path="promotion" element={<Promotions />} />
             <Route path="customers" element={<Customers />} />
-            <Route path="staff-roles" element={<StaffRoles />} />
-            <Route path="staff-roles/:id" element={<StaffDetail />} />
+            <Route
+              path="staff-roles"
+              element={
+                <PermissionGuard tabId="users">
+                  <StaffRoles />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="staff-roles/:id"
+              element={
+                <PermissionGuard tabId="users">
+                  <StaffDetail />
+                </PermissionGuard>
+              }
+            />
             <Route path="alerts" element={<Alerts />} />
-            <Route path="social-reviews" element={<SocialReviews />} />
-            <Route path="venues" element={<Venues />} />
-            <Route path="enquiries" element={<Enquiries />} />
+            <Route
+              path="social-reviews"
+              element={
+                <PermissionGuard tabId="social_reviews">
+                  <SocialReviews />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="venues"
+              element={
+                <PermissionGuard tabId="venues">
+                  <Venues />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="enquiries"
+              element={
+                <PermissionGuard tabId="enquiries">
+                  <Enquiries />
+                </PermissionGuard>
+              }
+            />
             <Route path="insight" element={<Insights />} />
             <Route path="security" element={<Security />} />
+            <Route
+              path="roles-permissions"
+              element={
+                <PermissionGuard roles={ROLES.SUPER_ADMIN}>
+                  <RolesPermissions />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="admin-users"
+              element={
+                <PermissionGuard roles={ROLES.SUPER_ADMIN}>
+                  <AdminUsers />
+                </PermissionGuard>
+              }
+            />
+            <Route path="profile" element={<ProfileSettings />} />
+            <Route path="profile-settings" element={<Navigate to="/profile" replace />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>
@@ -71,6 +235,5 @@ function App() {
     </Router>
   );
 }
-
 
 export default App;
