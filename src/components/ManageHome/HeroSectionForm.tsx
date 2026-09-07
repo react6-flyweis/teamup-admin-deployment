@@ -171,6 +171,7 @@ const HeroSectionForm: React.FC<HeroSectionFormProps> = ({ initialData, onSave, 
             <FileUploader
               value={data.backgroundMediaUrl}
               onChange={(url) => setData({ ...data, backgroundMediaUrl: url })}
+              aspectRatio="16:9"
             />
             <input
               type="text"
