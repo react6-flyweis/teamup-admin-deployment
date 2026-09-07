@@ -7,6 +7,8 @@ interface ImageInputWithUploadProps {
   onChange: (url: string) => void;
   label?: string;
   hint?: string;
+  aspectRatio?: string;
+  objectFit?: 'cover' | 'contain';
   placeholder?: string;
   accept?: string;
   className?: string;
@@ -18,11 +20,26 @@ interface ImageInputWithUploadProps {
   buttonText?: string;
 }
 
+const parseAspectRatio = (aspectRatio?: string, hint?: string): { cssRatio: string; label: string } | null => {
+  const source = aspectRatio || hint;
+  if (!source) return null;
+  const match = source.match(/(\d+)\s*[:/]\s*(\d+)/);
+  if (match) {
+    return {
+      cssRatio: `${match[1]} / ${match[2]}`,
+      label: `${match[1]}:${match[2]}`,
+    };
+  }
+  return null;
+};
+
 export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   value,
   onChange,
   label,
   hint,
+  aspectRatio,
+  objectFit,
   placeholder = 'Paste image URL or click upload',
   accept = 'image/*',
   className = '',
@@ -36,6 +53,21 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const ratioInfo = parseAspectRatio(aspectRatio, hint);
+  const fit = objectFit || (hint?.toLowerCase().includes('svg') || hint?.toLowerCase().includes('contain') || label?.toLowerCase().includes('icon') || label?.toLowerCase().includes('badge') ? 'contain' : 'cover');
+
+  let widthClass = previewWidth;
+  if (ratioInfo) {
+    if (previewWidth === 'w-32') {
+      if (ratioInfo.label === '1:1') widthClass = 'w-28';
+      else if (['2:1', '16:9', '21:9', '3:1'].includes(ratioInfo.label)) widthClass = 'w-48';
+      else if (['3:2', '16:10'].includes(ratioInfo.label)) widthClass = 'w-40';
+      else if (['5:4', '4:3'].includes(ratioInfo.label)) widthClass = 'w-36';
+    } else if (previewWidth === 'w-full') {
+      widthClass = 'w-full max-w-[280px]';
+    }
+  }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,15 +138,23 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
       </div>
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
       {showPreview && value && (
-        <div className={`mt-2 ${previewWidth} ${previewHeight} rounded-lg overflow-hidden border border-[#3A3530] bg-[#1A1A1A] relative group`}>
+        <div
+          className={`mt-2 ${widthClass} ${ratioInfo ? 'h-auto' : previewHeight} rounded-lg overflow-hidden border border-[#3A3530] bg-[#1A1A1A] relative group shadow-sm`}
+          style={ratioInfo ? { aspectRatio: ratioInfo.cssRatio } : undefined}
+        >
           <img
             src={value}
             alt="Preview"
-            className="w-full h-full object-cover"
+            className={`w-full h-full ${fit === 'contain' ? 'object-contain p-1.5' : 'object-cover'}`}
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
           />
+          {ratioInfo && (
+            <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[10px] text-gray-300 font-mono font-medium pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity">
+              {ratioInfo.label}
+            </span>
+          )}
         </div>
       )}
     </div>
