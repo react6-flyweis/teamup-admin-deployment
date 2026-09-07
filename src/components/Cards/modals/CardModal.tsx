@@ -90,18 +90,21 @@ const CardModal: React.FC<CardModalProps> = ({
               <label className="block text-sm font-medium mb-1">
                 Image <span className="text-xs text-gray-500 font-normal ml-1">(1:1 Square • Rec: 800×800 px)</span>
               </label>
-              <div className="border border-dashed border-black rounded-lg p-4 h-[218px] relative bg-white">
+              <div className="border border-dashed border-black rounded-lg p-4 relative bg-white flex flex-col items-center justify-center min-h-[220px]">
                 {formData.image ? (
-                  <div className="relative h-full">
+                  <div className="relative w-48 aspect-square max-w-full">
                     <img
                       src={formData.image}
                       alt="Uploaded preview"
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full object-cover rounded-lg border border-gray-200"
                     />
+                    <div className="absolute top-2 right-2 bg-black/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full pointer-events-none">
+                      1:1
+                    </div>
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-4 right-4 bg-white text-[#E1017D] border border-[#E1017D] px-5 py-2 rounded-lg font-semibold"
+                      className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-xs text-[#E1017D] border border-[#E1017D] px-3 py-1 text-xs rounded-lg font-semibold shadow-xs hover:bg-white"
                     >
                       Change Image
                     </button>
