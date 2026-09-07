@@ -6,6 +6,32 @@ import { useUpdateLocationMutation, useLocationsQuery, type LocationOpeningHour 
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+const formatTimeTo24 = (timeStr?: string): string => {
+  if (!timeStr) return '';
+  const trimmed = timeStr.trim();
+  if (trimmed.toLowerCase() === 'closed') return 'Closed';
+
+  // 12-hour format e.g. "09:00 AM", "9:00 am", "2:30 PM", "12:00 AM"
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)$/i);
+  if (match12) {
+    let hours = parseInt(match12[1], 10);
+    const minutes = match12[2];
+    const modifier = match12[3].toUpperCase();
+    if (modifier === 'PM' && hours < 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
+  }
+
+  // 24-hour format e.g. "09:00", "9:00", "17:00", "09:00:00"
+  const match24 = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (match24) {
+    const hours = match24[1].padStart(2, '0');
+    return `${hours}:${match24[2]}`;
+  }
+
+  return trimmed;
+};
+
 const getDefaultHours = (existingHours?: LocationOpeningHour[]) => {
   return DAYS.map((day, idx) => {
     const existing = existingHours?.find(
@@ -15,8 +41,8 @@ const getDefaultHours = (existingHours?: LocationOpeningHour[]) => {
       return {
         id: String(idx + 1),
         day,
-        openTime: existing.isClosed ? 'Closed' : (existing.open || ''),
-        closeTime: existing.isClosed ? 'Closed' : (existing.close || ''),
+        openTime: existing.isClosed ? 'Closed' : formatTimeTo24(existing.open),
+        closeTime: existing.isClosed ? 'Closed' : formatTimeTo24(existing.close),
       };
     }
     return {
@@ -172,29 +198,55 @@ const LocationHoursForm: React.FC = () => {
                     <span>Closed</span>
                   </label>
 
-                  <input
-                    type="time"
-                    value={isClosed ? '' : hour.openTime}
-                    disabled={isClosed}
-                    onChange={(e) => {
-                      const newHours = [...data.hours];
-                      newHours[index].openTime = e.target.value;
-                      setData({ ...data, hours: newHours });
-                    }}
-                    className="flex-1 h-8 px-2 rounded bg-[#1A1A1A] border border-[#3A3530] text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      type="time"
+                      value={isClosed ? '' : hour.openTime}
+                      disabled={isClosed}
+                      aria-label={`${hour.day} opening time`}
+                      title={isClosed ? 'Closed' : 'Click to select opening time'}
+                      onClick={(e) => {
+                        if (!isClosed) {
+                          try {
+                            e.currentTarget.showPicker?.();
+                          } catch {
+                            // ignore if showPicker is unsupported
+                          }
+                        }
+                      }}
+                      onChange={(e) => {
+                        const newHours = [...data.hours];
+                        newHours[index].openTime = e.target.value;
+                        setData({ ...data, hours: newHours });
+                      }}
+                      className="show-time-selector w-full h-8 px-2 rounded bg-[#1A1A1A] border border-[#3A3530] text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus:border-[#E1017D] scheme-dark"
+                    />
+                  </div>
                   <span className="text-gray-500">-</span>
-                  <input
-                    type="time"
-                    value={isClosed ? '' : hour.closeTime}
-                    disabled={isClosed}
-                    onChange={(e) => {
-                      const newHours = [...data.hours];
-                      newHours[index].closeTime = e.target.value;
-                      setData({ ...data, hours: newHours });
-                    }}
-                    className="flex-1 h-8 px-2 rounded bg-[#1A1A1A] border border-[#3A3530] text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      type="time"
+                      value={isClosed ? '' : hour.closeTime}
+                      disabled={isClosed}
+                      aria-label={`${hour.day} closing time`}
+                      title={isClosed ? 'Closed' : 'Click to select closing time'}
+                      onClick={(e) => {
+                        if (!isClosed) {
+                          try {
+                            e.currentTarget.showPicker?.();
+                          } catch {
+                            // ignore if showPicker is unsupported
+                          }
+                        }
+                      }}
+                      onChange={(e) => {
+                        const newHours = [...data.hours];
+                        newHours[index].closeTime = e.target.value;
+                        setData({ ...data, hours: newHours });
+                      }}
+                      className="show-time-selector w-full h-8 px-2 rounded bg-[#1A1A1A] border border-[#3A3530] text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus:border-[#E1017D] scheme-dark"
+                    />
+                  </div>
                 </div>
               );
             })}
