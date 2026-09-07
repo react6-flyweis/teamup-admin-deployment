@@ -181,7 +181,7 @@ const ChooseGamesForm: React.FC<ChooseGamesFormProps> = ({ initialData, onSave, 
               item.isActive ? 'border-[#3A3530] bg-[#222222]' : 'border-gray-800 bg-[#1A1A1A] opacity-75'
             }`}
           >
-            <div className="relative h-40 w-full mb-3 rounded overflow-hidden bg-gray-800">
+            <div className="relative aspect-square w-full mb-3 rounded overflow-hidden bg-gray-800">
               <img
                 src={item.imageUrl}
                 alt={item.title}
