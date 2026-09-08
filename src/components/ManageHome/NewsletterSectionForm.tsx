@@ -46,6 +46,7 @@ const NewsletterSectionForm: React.FC<NewsletterSectionFormProps> = ({
         <div>
           <ImageInputWithUpload
             label="Background Image"
+            hint="16:9 to 21:9 • Rec: 1920×1080 or 1920×600 px"
             value={data.backgroundImageUrl}
             onChange={(url) => setData({ ...data, backgroundImageUrl: url })}
             placeholder="Paste background image URL or upload"
@@ -54,7 +55,7 @@ const NewsletterSectionForm: React.FC<NewsletterSectionFormProps> = ({
             previewWidth="w-48"
             inputClassName="w-full h-10 px-3 rounded bg-[#2A2A2A] border border-[#3A3530] text-white text-sm"
           />
-          <p className="text-xs text-gray-500 mt-1">Recommended size: 1920x800px or larger party/event background image.</p>
+          <p className="text-xs text-gray-500 mt-1">Recommended size: 1920×1080 px (16:9) or 1920×600 px (21:9) banner image.</p>
         </div>
 
         {/* Heading */}

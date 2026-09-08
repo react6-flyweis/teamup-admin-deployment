@@ -155,7 +155,9 @@ const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, o
               </div>
               {/* Icon upload */}
               <div>
-                <label className={labelCls}>Nav Icon (shown in header bar)</label>
+                <label className={labelCls}>
+                  Nav Icon (shown in header bar) <span className="text-xs text-gray-400 font-normal ml-1.5">(1:1 Square • Rec: 160×160 px • SVG/PNG)</span>
+                </label>
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     {icon ? (
@@ -197,7 +199,9 @@ const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, o
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>Hero Image URL</label>
+                    <label className={labelCls}>
+                      Hero Image URL <span className="text-xs text-gray-400 font-normal ml-1.5">(16:9 to 21:9 • Rec: 1905×805 or 1920×1080 px)</span>
+                    </label>
                     <div className="flex gap-2">
                       <input type="text" value={pageHeroImage} onChange={e => setPageHeroImage(e.target.value)} placeholder="Paste image URL here" className={inputCls} />
                       <button type="button" onClick={() => heroImageRef.current?.click()} className="px-4 bg-[#3A3530] text-white rounded-lg hover:bg-[#4A4540] transition-colors">
@@ -326,7 +330,8 @@ const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, o
                         </div>
 
                         <ImageInputWithUpload
-                          label="Image URL"
+                          label="Card Image URL"
+                          hint="5:4 • Rec: 800×640 px"
                           value={card.image}
                           onChange={(url) => updateBundleCard(card.id, 'image', url)}
                           placeholder="Paste image URL here"
