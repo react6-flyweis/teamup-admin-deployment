@@ -28,6 +28,7 @@ import SocialReviews from "./pages/SocialReviews";
 import Enquiries from "@/pages/Enquiries";
 import RolesPermissions from "@/pages/RolesPermissions";
 import AdminUsers from "@/pages/AdminUsers";
+import AuditLogs from "@/pages/AuditLogs";
 import ProfileSettings from "@/pages/ProfileSettings";
 import NotFound from "@/pages/NotFound";
 import { AuthGuard } from "@/components/AuthGuard";
@@ -223,6 +224,14 @@ function App() {
               element={
                 <PermissionGuard roles={ROLES.SUPER_ADMIN}>
                   <AdminUsers />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="audit-logs"
+              element={
+                <PermissionGuard roles={ROLES.SUPER_ADMIN}>
+                  <AuditLogs />
                 </PermissionGuard>
               }
             />
