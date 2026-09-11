@@ -6,6 +6,7 @@ import { Chevron } from '@/assets/icons';
 import GameForm from './forms/GameForm';
 import { useHeaderCategoriesQuery, useMenuItemQuery } from '@/hooks/useHeaderCategories';
 import { createMenuItem, updateMenuItem } from '@/hooks/useHeaderSubItems';
+import { fetchGame } from '@/hooks/useGames';
 
 const GameFormPage: React.FC = () => {
   const { categoryId, subItemId } = useParams<{ categoryId: string; subItemId: string }>();
@@ -19,58 +20,100 @@ const GameFormPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isMenuItemLoading) return;
+    let isMounted = true;
 
-    // 1. Check if backend API returned details for menuItemId
-    if (menuItemResponse?.menuItem) {
-      const apiItem = menuItemResponse.menuItem;
-      
-      const detailsMap: Record<string, string> = {};
-      if (Array.isArray(apiItem.details)) {
-        apiItem.details.forEach((d: { label: string; value: string }) => {
-          detailsMap[d.label] = d.value;
-        });
+    const loadData = async () => {
+      if (isMenuItemLoading) return;
+
+      // 1. Check if backend API returned details for menuItemId
+      if (menuItemResponse?.menuItem) {
+        const apiItem = menuItemResponse.menuItem;
+        const linkedId = apiItem.linkedItemId != null ? String(apiItem.linkedItemId) : undefined;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let gameData: any = null;
+
+        if (linkedId) {
+          try {
+            const res = await fetchGame(linkedId);
+            gameData = res?.game || res?.data || res;
+          } catch (err) {
+            console.warn('Could not fetch game from API:', err);
+          }
+        }
+
+        const detailsMap: Record<string, string> = {};
+        if (Array.isArray(apiItem.details)) {
+          apiItem.details.forEach((d: { label: string; value: string }) => {
+            detailsMap[d.label] = d.value;
+          });
+        }
+
+        const price = gameData?.pricePerPerson ?? gameData?.priceFrom;
+        const time = gameData?.timeOption || gameData?.duration;
+        const lanes = gameData?.totalLanes != null ? String(gameData.totalLanes) : '';
+        const people = gameData?.peopleAllowedPerLane != null ? String(gameData.peopleAllowedPerLane) : '';
+
+        const formatted: HeaderSubItem = {
+          id: apiItem._id || subItemId || '',
+          name: apiItem.title || gameData?.name || gameData?.gameName || '',
+          slug: apiItem.slug || gameData?.slug || '',
+          path: apiItem.linkUrl || (gameData?.slug ? `/games/${gameData.slug}` : ''),
+          icon: apiItem.iconUrl || gameData?.gameIconUrl || '',
+          type: apiItem.type || 'game',
+          linkedItemId: linkedId,
+          linkedGame: gameData ? {
+            _id: String(gameData._id || gameData.id),
+            name: gameData.name || gameData.gameName || '',
+            slug: gameData.slug || '',
+            description: gameData.description || '',
+            imageUrl: gameData.imageUrl || gameData.cardImageUrl || gameData.bannerImageUrl || '',
+            duration: time,
+            priceFrom: typeof price === 'number' ? price : price ? parseFloat(price) : undefined,
+            tags: gameData.tags || [],
+            isActive: gameData.isActive,
+          } : undefined,
+          pageHeadline: gameData?.name || gameData?.gameName || gameData?.headline || apiItem.tagline || '',
+          pageTagline: apiItem.tagline || '',
+          cardDescription: gameData?.description || apiItem.taglineDescription || apiItem.description || '',
+          pageHeroImage: gameData?.bannerImageUrl || gameData?.cardImageUrl || gameData?.imageUrl || apiItem.heroImageUrl || apiItem.imageUrl || '',
+          heroBookNowLink: apiItem.bookingUrl || '',
+          isActive: apiItem.isActive !== undefined ? apiItem.isActive : (gameData?.isActive ?? true),
+          isHidden: apiItem.isActive !== undefined ? !apiItem.isActive : false,
+          pageDetails: {
+            peoplePerMachine: people || detailsMap['How Many'] || '',
+            timeMin: time || detailsMap['Time'] || '',
+            lanes: lanes || detailsMap['How Many LANES'] || '',
+            price: (price != null ? String(price) : '') || detailsMap['Price'] || '',
+            minAge: gameData?.minimumAgeRequirement || detailsMap['Minimum Age'] || '',
+            wheelchairAccess: gameData?.wheelchairAccessible !== undefined ? gameData.wheelchairAccessible : (detailsMap['Wheelchair Access']?.toLowerCase() === 'yes'),
+          },
+        };
+
+        if (isMounted) {
+          setInitialData(formatted);
+          setLoading(false);
+        }
+        return;
       }
 
-      const formatted: HeaderSubItem = {
-        id: apiItem._id || subItemId || '',
-        name: apiItem.title || '',
-        slug: apiItem.slug || '',
-        path: apiItem.linkUrl || '',
-        icon: apiItem.iconUrl || '',
-        type: apiItem.type || 'game',
-        linkedItemId: apiItem.linkedItemId || undefined,
-        pageHeadline: apiItem.tagline || '',
-        pageTagline: apiItem.tagline || '',
-        cardDescription: apiItem.taglineDescription || apiItem.description || '',
-        pageHeroImage: apiItem.heroImageUrl || apiItem.imageUrl || '',
-        heroBookNowLink: apiItem.bookingUrl || '',
-        isActive: apiItem.isActive !== undefined ? apiItem.isActive : true,
-        isHidden: apiItem.isActive !== undefined ? !apiItem.isActive : false,
-        pageDetails: {
-          peoplePerMachine: detailsMap['How Many'] || '',
-          timeMin: detailsMap['Time'] || '',
-          lanes: detailsMap['How Many LANES'] || '',
-          price: detailsMap['Price'] || '',
-          minAge: detailsMap['Minimum Age'] || '',
-          wheelchairAccess: detailsMap['Wheelchair Access']?.toLowerCase() === 'yes',
-        },
-      };
-
-      setInitialData(formatted);
-      setLoading(false);
-      return;
-    }
-
-    // 2. Fallback to categoriesData if API response is not available
-    const category = categoriesData?.categories?.find(c => c.id === categoryId);
-    if (subItemId && subItemId !== 'new') {
-      const subItem = category?.subItems?.find(s => s.id === subItemId);
-      if (subItem) {
-        setInitialData(subItem);
+      // 2. Fallback to categoriesData if API response is not available
+      const category = categoriesData?.categories?.find(c => c.id === categoryId);
+      if (subItemId && subItemId !== 'new') {
+        const subItem = category?.subItems?.find(s => s.id === subItemId);
+        if (subItem && isMounted) {
+          setInitialData(subItem);
+        }
       }
-    }
-    setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [categoryId, subItemId, menuItemResponse, categoriesData, isMenuItemLoading]);
 
   const handleSave = async (subItemData: Partial<HeaderSubItem>) => {
