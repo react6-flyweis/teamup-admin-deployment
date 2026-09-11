@@ -139,3 +139,8 @@ export const useSingleGameQuery = (gameIdOrSlug?: string) => {
     enabled: !!gameIdOrSlug,
   });
 };
+
+export const fetchGame = async (gameIdOrSlug: string) => {
+  const response = await apiClient.get(`/games/${gameIdOrSlug}`);
+  return response.data;
+};
