@@ -12,6 +12,7 @@ import FooterIcon from '@/assets/icons/FooterIcon';
 import EnquiriesIcon from '@/assets/icons/EnquiriesIcon';
 import SecurityIcon from '@/assets/icons/SecurityIcon';
 import UserIcon from '@/assets/icons/UserIcon';
+import AuditLogIcon from '@/assets/icons/AuditLogIcon';
 
 export interface NavigationItem {
   id: string;
@@ -116,6 +117,13 @@ export const navigationItems: NavigationItem[] = [
     label: 'Roles & Permissions',
     icon: SecurityIcon,
     path: '/roles-permissions',
+    roles: [ROLES.SUPER_ADMIN],
+  },
+  {
+    id: 'audit-logs',
+    label: 'Audit Logs',
+    icon: AuditLogIcon,
+    path: '/audit-logs',
     roles: [ROLES.SUPER_ADMIN],
   },
 ];

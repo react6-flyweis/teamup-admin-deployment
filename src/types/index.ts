@@ -6,3 +6,4 @@ export interface IconProps {
 }
 
 export * from './auth';
+export * from './auditLogs';
