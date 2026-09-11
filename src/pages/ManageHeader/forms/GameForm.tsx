@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { HeaderSubItem, OtherGameCard, ChecklistItem, ChooseGameCard } from '@/components/ManageHeader/types';
@@ -92,21 +93,26 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
       setChooseGamesHeading(initialData.chooseGamesHeading || '');
       setChooseGameCards(initialData.chooseGameCards || []);
 
-      const targetGameId = initialData.linkedItemId;
+      const targetGameId = initialData.linkedItemId ? String(initialData.linkedItemId) : '';
       if (targetGameId) {
         setLinkMode('existing');
         setSelectedGameId(targetGameId);
-        const linkedGame = availableGames.find(g => g._id === targetGameId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const linkedGame = initialData.linkedGame || availableGames.find(g => String(g._id || (g as any).id) === targetGameId);
         if (linkedGame) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const gAny = linkedGame as any;
           // Navigation Display Name remains from initialData (menu item title)
-          setName(initialData.name || linkedGame.name);
-          setPath(initialData.path || `/games/${linkedGame.slug}`);
+          setName(initialData.name || linkedGame.name || gAny.gameName || '');
+          setPath(initialData.path || (linkedGame.slug ? `/games/${linkedGame.slug}` : ''));
           // Hero Headline / Game Name explicitly comes from linkedGame.name (game API)
-          setPageHeadline(linkedGame.name);
+          setPageHeadline(linkedGame.name || gAny.gameName || initialData.pageHeadline || '');
           setCardDescription(linkedGame.description || initialData.cardDescription || '');
-          setPageHeroImage(linkedGame.imageUrl || initialData.pageHeroImage || '');
-          setPrice(initialData.pageDetails?.price || (linkedGame.priceFrom ? String(linkedGame.priceFrom) : ''));
-          setTimeMin(initialData.pageDetails?.timeMin || linkedGame.duration || '');
+          setPageHeroImage(linkedGame.imageUrl || gAny.cardImageUrl || gAny.bannerImageUrl || initialData.pageHeroImage || '');
+          const pVal = initialData.pageDetails?.price || (linkedGame.priceFrom != null ? String(linkedGame.priceFrom) : (gAny.pricePerPerson != null ? String(gAny.pricePerPerson) : ''));
+          setPrice(pVal);
+          const tVal = initialData.pageDetails?.timeMin || linkedGame.duration || gAny.timeOption || '';
+          setTimeMin(tVal);
           if (linkedGame.tags && linkedGame.tags.length > 0) {
             setTagsInput(linkedGame.tags.join(', '));
           }
@@ -114,20 +120,27 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
       } else if (availableGames.length > 0) {
         // Try matching slug or ID with availableGames to preselect pre-existing game
         const currentSlug = (initialData.slug || initialData.path || '').replace(/^\//, '').toLowerCase();
-        const matchedGame = availableGames.find(g => 
-          g._id === initialData.id || 
-          g.slug.toLowerCase() === currentSlug ||
-          g.name.toLowerCase() === (initialData.name || '').toLowerCase()
-        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const matchedGame = availableGames.find(g => {
+          const gAny = g as any;
+          return String(g._id || gAny.id) === String(initialData.id) || 
+            (g.slug && g.slug.toLowerCase() === currentSlug) ||
+            ((g.name || gAny.gameName) && (g.name || gAny.gameName).toLowerCase() === (initialData.name || '').toLowerCase());
+        });
 
         if (matchedGame) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mAny = matchedGame as any;
+          const matchedId = String(matchedGame._id || mAny.id);
           setLinkMode('existing');
-          setSelectedGameId(matchedGame._id);
-          setPageHeadline(matchedGame.name);
+          setSelectedGameId(matchedId);
+          setPageHeadline(matchedGame.name || mAny.gameName || '');
           setCardDescription(matchedGame.description || initialData.cardDescription || '');
-          setPageHeroImage(matchedGame.imageUrl || initialData.pageHeroImage || '');
-          setPrice(matchedGame.priceFrom ? String(matchedGame.priceFrom) : '');
-          setTimeMin(matchedGame.duration || '');
+          setPageHeroImage(matchedGame.imageUrl || mAny.cardImageUrl || mAny.bannerImageUrl || initialData.pageHeroImage || '');
+          const pVal = matchedGame.priceFrom != null ? String(matchedGame.priceFrom) : (mAny.pricePerPerson != null ? String(mAny.pricePerPerson) : '');
+          setPrice(pVal);
+          const tVal = matchedGame.duration || mAny.timeOption || '';
+          setTimeMin(tVal);
           if (matchedGame.tags && matchedGame.tags.length > 0) {
             setTagsInput(matchedGame.tags.join(', '));
           }
@@ -136,25 +149,29 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
     }
   }, [initialData, availableGames]);
 
-
-
   // Handle selecting an existing game from dropdown
   const handleSelectGame = (gameId: string) => {
     setSelectedGameId(gameId);
-    const foundGame = availableGames.find(g => g._id === gameId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const foundGame = availableGames.find(g => String(g._id || (g as any).id) === String(gameId));
     if (foundGame) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fAny = foundGame as any;
       if (!name) {
-        setName(foundGame.name);
+        setName(foundGame.name || fAny.gameName || '');
       }
-      setPath(`/games/${foundGame.slug}`);
-      setPageHeadline(foundGame.name);
-      setCardDescription(foundGame.description);
-      if (foundGame.imageUrl) {
-        setPageHeroImage(foundGame.imageUrl);
+      setPath(foundGame.slug ? `/games/${foundGame.slug}` : '');
+      setPageHeadline(foundGame.name || fAny.gameName || '');
+      setCardDescription(foundGame.description || '');
+      const img = foundGame.imageUrl || fAny.cardImageUrl || fAny.bannerImageUrl;
+      if (img) {
+        setPageHeroImage(img);
       }
-      setPrice(foundGame.priceFrom ? String(foundGame.priceFrom) : '');
-      if (foundGame.duration) {
-        setTimeMin(foundGame.duration);
+      const priceVal = foundGame.priceFrom ?? fAny.pricePerPerson;
+      setPrice(priceVal != null ? String(priceVal) : '');
+      const durVal = foundGame.duration || fAny.timeOption;
+      if (durVal) {
+        setTimeMin(durVal);
       }
       if (foundGame.tags && foundGame.tags.length > 0) {
         setTagsInput(foundGame.tags.join(', '));
@@ -170,7 +187,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
 
     setIsSubmitting(true);
     try {
-      const targetGameId = linkMode === 'existing' ? selectedGameId : (initialData?.linkedItemId || selectedGameId);
+      const targetGameId = linkMode === 'existing' ? selectedGameId : (initialData?.linkedItemId ? String(initialData.linkedItemId) : selectedGameId);
 
       // 1. Update menu item navigation details via PATCH /api/menu-items/:menuItemId
       // "Navigation Display Name" (`name`) updates `title` on menu-items API.
@@ -215,11 +232,16 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
 
           await apiClient.patch(`/games/${targetGameId}`, {
             name: pageHeadline.trim(), // Explicitly Hero Headline / Game Name only
+            gameName: pageHeadline.trim(),
             slug: path.trim().replace(/^\//, ''),
             description: cardDescription,
             imageUrl: pageHeroImage,
+            cardImageUrl: pageHeroImage,
+            bannerImageUrl: pageHeroImage,
             duration: timeMin,
+            timeOption: timeMin,
             priceFrom: isNaN(numPrice) ? 45 : numPrice,
+            pricePerPerson: isNaN(numPrice) ? undefined : numPrice,
             tags: parsedTags.length > 0 ? parsedTags : ['family', 'indoor', 'featured'],
             isActive: true,
           });
@@ -381,11 +403,15 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
                       className={inputCls}
                     >
                       <option value="">-- Select a Game --</option>
-                      {availableGames.map(game => (
-                        <option key={game._id} value={game._id}>
-                          {game.name} ({game.slug})
-                        </option>
-                      ))}
+                      {availableGames.map(game => {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const gid = String(game._id || (game as any).id);
+                        return (
+                          <option key={gid} value={gid}>
+                            {game.name || (game as any).gameName} ({game.slug})
+                          </option>
+                        );
+                      })}
                     </select>
                   )}
                 </div>
