@@ -1,5 +1,6 @@
 import React, { useState, useDeferredValue } from 'react';
 import { useNewsletterQuery, type NewsletterSubscription } from '@/hooks/useNewsletter';
+import NewsletterSignupBanner from './NewsletterSignupBanner';
 import Pagination from '@/utils/Pagination';
 import SearchIcon from '@/assets/icons/SearchIcon';
 import MailIcon from '@/assets/icons/MailIcon';
@@ -64,8 +65,12 @@ export const NewsletterSubscriptionsTab: React.FC = () => {
 
   return (
     <div className="w-full space-y-6">
+      {/* Extracted Newsletter Signup Visibility Banner */}
+      <NewsletterSignupBanner />
+
       {/* Search & Actions Bar */}
       <div className="bg-[#1C1819] border border-[#3A3530] rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+
         <div className="relative w-full sm:max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             <SearchIcon size={18} className="text-gray-400" />

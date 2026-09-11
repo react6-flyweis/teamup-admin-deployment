@@ -69,3 +69,92 @@ export const useDeleteNewsletterMutation = () => {
     },
   });
 };
+
+export interface NewsletterSignupSiteContent {
+  _id?: string;
+  section: string;
+  isActive: boolean;
+  locationSlug?: string;
+  data?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface NewsletterSignupResponse {
+  content?: NewsletterSignupSiteContent;
+  section?: string;
+  isActive?: boolean;
+}
+
+export interface ToggleNewsletterSignupPayload {
+  isActive: boolean;
+  locationSlug?: string;
+}
+
+export const useNewsletterSignupStatusQuery = (locationSlug?: string) => {
+  return useQuery<{ isActive: boolean; raw?: unknown }>({
+    queryKey: ['newsletter-signup-content', locationSlug],
+    queryFn: async () => {
+      const queryParam = locationSlug ? `?locationSlug=${encodeURIComponent(locationSlug)}` : '';
+      try {
+        const response = await apiClient.get(`/site-content/newsletter-signup${queryParam}`);
+        const data = response.data;
+        const isActive =
+          data?.content?.isActive !== undefined
+            ? Boolean(data.content.isActive)
+            : data?.isActive !== undefined
+            ? Boolean(data.isActive)
+            : true;
+        return { isActive, raw: data };
+      } catch {
+        try {
+          const sep = queryParam ? '&' : '?';
+          const fallbackRes = await apiClient.get(
+            `/site-content${queryParam}${sep}section=newsletter-signup`
+          );
+          const fbData = fallbackRes.data;
+          const isActive =
+            fbData?.content?.isActive !== undefined
+              ? Boolean(fbData.content.isActive)
+              : fbData?.isActive !== undefined
+              ? Boolean(fbData.isActive)
+              : true;
+          return { isActive, raw: fbData };
+        } catch {
+          // If not initialized yet, default to active
+          return { isActive: true };
+        }
+      }
+    },
+  });
+};
+
+export const useToggleNewsletterSignupMutation = (locationSlug?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: ToggleNewsletterSignupPayload) => {
+      const slug = payload.locationSlug || locationSlug;
+      const queryParam = slug ? `?locationSlug=${encodeURIComponent(slug)}` : '';
+      const body = {
+        section: 'newsletter-signup',
+        isActive: payload.isActive,
+        data:{}
+      };
+      try {
+        const response = await apiClient.post(`/site-content${queryParam}`, body);
+        return response.data;
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 404 || status === 409) {
+          const response = await apiClient.patch(`/site-content/newsletter-signup${queryParam}`, body);
+          return response.data;
+        }
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['newsletter-signup-content'] });
+    },
+  });
+};
+
