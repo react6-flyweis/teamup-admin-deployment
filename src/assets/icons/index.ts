@@ -32,3 +32,4 @@ export { default as CloseIcon } from './CloseIcon';
 export { default as PhoneIcon } from './PhoneIcon';
 export { default as EnquiriesIcon } from './EnquiriesIcon';
 export { default as AuditLogIcon } from './AuditLogIcon';
+export { default as CorporateIcon } from './CorporateIcon';
