@@ -2,7 +2,9 @@ import { useState } from 'react';
 import MenuTable from '../components/Bites/MenuTable';
 import AddEditFoodItemsModal from '../components/Bites/AddEditFoodItemsModal';
 import FoodComboSection from '../components/Bites/FoodComboSection';
+import DrinksHeroSection from '../components/Bites/DrinksHeroSection';
 import BitesHeaderBanner, { type BiteFilter } from '../components/Bites/BitesHeaderBanner';
+import { useLocationStore } from '../store/locationStore';
 
 import {
   useFoodCategoriesQuery,
@@ -42,6 +44,10 @@ const Bites = () => {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [activeFilter, setActiveFilter] = useState<BiteFilter>('food');
   const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
+
+  // Selected Location for location-based site-content
+  const { selectedLocation } = useLocationStore();
+  const locationSlug = selectedLocation?.slug;
 
   // Queries
   const { data: categories = [], isLoading: categoriesLoading } = useFoodCategoriesQuery();
@@ -237,6 +243,14 @@ const Bites = () => {
       {/* Banner Section */}
       <BitesHeaderBanner activeFilter={activeFilter} onFilterChange={setActiveFilter} />
 
+      {/* Drinks Hero Section Configuration */}
+      {activeFilter === 'drinks' && (
+        <DrinksHeroSection
+          locationSlug={locationSlug}
+          locationName={selectedLocation?.name}
+        />
+      )}
+
       {/* Menu Items Section */}
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center">
@@ -263,8 +277,8 @@ const Bites = () => {
         />
       </div>
 
-      {/* Food Combo Section */}
-      <FoodComboSection />
+      {/* Food Combo Section (Only on Food tab) */}
+      {activeFilter === 'food' && <FoodComboSection />}
 
       {/* Add/Edit Menu Item Modal */}
       {showModal && (

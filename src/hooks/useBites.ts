@@ -70,13 +70,23 @@ export interface FoodCombosSection {
   items: FoodComboItem[];
 }
 
+export interface DrinksSection {
+  title: string;
+  description: string;
+  backgroundImage: string;
+}
+
+export interface FoodDrinksData {
+  foodCombos?: FoodCombosSection;
+  drinksSection?: DrinksSection;
+  [key: string]: unknown;
+}
+
 export interface FoodDrinksSiteContent {
-  _id: string;
-  section: string;
-  data: {
-    foodCombos?: FoodCombosSection;
-  };
-  isActive: boolean;
+  _id?: string;
+  section?: string;
+  data?: FoodDrinksData;
+  isActive?: boolean;
 }
 
 // 1. Food Categories Hooks
@@ -289,10 +299,18 @@ export const useReorderDrinksMutation = () => {
 };
 
 export interface FoodDrinksSiteContentResponse {
-  content: FoodDrinksSiteContent;
+  content?: FoodDrinksSiteContent;
+  data?: FoodDrinksData;
+  [key: string]: unknown;
 }
 
-// 4. Site Content (Combos) Hooks
+export interface UpdateFoodDrinksContentPayload {
+  data: Partial<FoodDrinksData>;
+  isActive?: boolean;
+  locationSlug?: string;
+}
+
+// 4. Site Content (Combos & Hero) Hooks
 export const useFoodDrinksContentQuery = (locationSlug?: string) => {
   return useQuery<FoodDrinksSiteContentResponse>({
     queryKey: ['food-drinks-content', locationSlug],
@@ -307,7 +325,7 @@ export const useFoodDrinksContentQuery = (locationSlug?: string) => {
 export const useUpdateFoodDrinksContentMutation = (locationSlug?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { data: { foodCombos?: FoodCombosSection }; isActive?: boolean; locationSlug?: string }) => {
+    mutationFn: async (payload: UpdateFoodDrinksContentPayload) => {
       const slug = payload.locationSlug || locationSlug;
       const queryParam = slug ? `?locationSlug=${encodeURIComponent(slug)}` : '';
       const response = await apiClient.patch(`/site-content/food-drinks${queryParam}`, payload);
