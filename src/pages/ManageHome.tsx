@@ -1,10 +1,20 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import HeroSectionForm from "@/components/ManageHome/HeroSectionForm";
 import BoomBundlesForm from "@/components/ManageHome/BoomBundlesForm";
 import LocationHoursForm from "@/components/ManageHome/LocationHoursForm";
 import ChooseGamesForm from "@/components/ManageHome/ChooseGamesForm";
 import BitesAndEventsForm from "@/components/ManageHome/BitesAndEventsForm";
 import NewsletterSectionForm from "@/components/ManageHome/NewsletterSectionForm";
+import CorporateHeroForm from "@/components/ManageCorporate/CorporateHeroForm";
+import CorporatePackagesForm from "@/components/ManageCorporate/CorporatePackagesForm";
+import CorporateBookOnlineForm from "@/components/ManageCorporate/CorporateBookOnlineForm";
+import CorporatePrivateHireForm from "@/components/ManageCorporate/CorporatePrivateHireForm";
+import CorporateOtherGamesForm from "@/components/ManageCorporate/CorporateOtherGamesForm";
+import {
+  DEFAULT_CORPORATES_DATA,
+  type CorporatesData,
+} from "@/hooks/useCorporate";
 import {
   useHomeQuery,
   useUpdateHomeMutation,
@@ -12,7 +22,7 @@ import {
 } from "@/hooks/useHome";
 import { useLocationStore } from "@/store/locationStore";
 
-type Tab = "hero" | "bundles" | "location" | "games" | "bites" | "newsletter";
+type Tab = "hero" | "bundles" | "location" | "games" | "bites" | "newsletter" | "corporates";
 
 const ManageHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("hero");
@@ -31,6 +41,7 @@ const ManageHome: React.FC = () => {
     { id: "games", label: "Choose Game" },
     { id: "bites", label: "Bites & Events" },
     { id: "newsletter", label: "Sign Up / Newsletter" },
+    { id: "corporates", label: "Corporates / Parties" },
   ];
 
   if (isLoading) {
@@ -264,6 +275,27 @@ const ManageHome: React.FC = () => {
     );
   };
 
+  const handleSaveCorporates = (partial: Partial<CorporatesData>, label: string) => {
+    const existingCorporates: CorporatesData = rawData?.corporates || DEFAULT_CORPORATES_DATA;
+    const mergedCorporates: CorporatesData = {
+      ...existingCorporates,
+      ...partial,
+    };
+    updateHomeMutation.mutate(
+      {
+        data: {
+          corporates: mergedCorporates,
+        },
+      },
+      {
+        onSuccess: () => {
+          setSuccessMsg(`${label} updated successfully`);
+          setTimeout(() => setSuccessMsg(null), 3000);
+        },
+      },
+    );
+  };
+
   return (
     <div className="p-6 text-white min-h-screen">
       <div className="mb-8 flex justify-between items-center">
@@ -338,6 +370,86 @@ const ManageHome: React.FC = () => {
             onSave={handleSaveNewsletter}
             isSaving={updateHomeMutation.isPending}
           />
+        )}
+        {activeTab === "corporates" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#141414] border border-[#3A3530] p-4 rounded-xl">
+              <div>
+                <h3 className="font-semibold text-white">Corporate Page Details</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Manage corporate hero, party packages, private hire, and featured games.
+                </p>
+              </div>
+              <Link
+                to="/manage-corporate"
+                className="inline-flex items-center gap-1.5 self-start sm:self-auto bg-[#2A2A2A] hover:bg-[#3A3530] text-[#E1017D] hover:text-white px-3.5 py-2 rounded-lg text-xs font-semibold border border-[#3A3530] transition-colors"
+              >
+                Dedicated Corporate View ↗
+              </Link>
+            </div>
+
+            <CorporateHeroForm
+              initialData={{
+                pageUrl: rawData?.corporates?.pageUrl ?? DEFAULT_CORPORATES_DATA.pageUrl ?? "",
+                heroTitle: rawData?.corporates?.heroTitle ?? DEFAULT_CORPORATES_DATA.heroTitle ?? "",
+                heroImageUrl: rawData?.corporates?.heroImageUrl ?? DEFAULT_CORPORATES_DATA.heroImageUrl ?? "",
+              }}
+              onSave={(fields) => handleSaveCorporates(fields, "Corporate Hero")}
+              isSaving={updateHomeMutation.isPending}
+            />
+
+            <CorporatePackagesForm
+              initialData={{
+                packagesTitle: rawData?.corporates?.packagesTitle ?? DEFAULT_CORPORATES_DATA.packagesTitle ?? "",
+                packagesDescription: rawData?.corporates?.packagesDescription ?? DEFAULT_CORPORATES_DATA.packagesDescription ?? "",
+                packages: rawData?.corporates?.packages ?? DEFAULT_CORPORATES_DATA.packages ?? [],
+                budgetText: rawData?.corporates?.budgetText ?? DEFAULT_CORPORATES_DATA.budgetText ?? "",
+              }}
+              onSave={(fields) => handleSaveCorporates(fields, "Corporate Packages")}
+              isSaving={updateHomeMutation.isPending}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <CorporateBookOnlineForm
+                initialData={
+                  rawData?.corporates?.bookOnline ?? DEFAULT_CORPORATES_DATA.bookOnline ?? {
+                    title: "BOOK ONLINE",
+                    body: "",
+                    imageUrl: "",
+                    buttonText: "BOOK NOW",
+                    buttonLink: "",
+                  }
+                }
+                onSave={(fields) => handleSaveCorporates({ bookOnline: fields }, "Book Online")}
+                isSaving={updateHomeMutation.isPending}
+              />
+
+              <CorporatePrivateHireForm
+                initialData={
+                  rawData?.corporates?.privateHire ?? DEFAULT_CORPORATES_DATA.privateHire ?? {
+                    title: "PRIVATE HIRE",
+                    body: "",
+                    imageUrl: "",
+                    buttonText: "CONTACT US",
+                    buttonLink: "",
+                  }
+                }
+                onSave={(fields) => handleSaveCorporates({ privateHire: fields }, "Private Hire")}
+                isSaving={updateHomeMutation.isPending}
+              />
+            </div>
+
+            <CorporateOtherGamesForm
+              initialData={
+                rawData?.corporates?.otherGames ?? DEFAULT_CORPORATES_DATA.otherGames ?? {
+                  title: "OTHER GAMES",
+                  items: [],
+                }
+              }
+              onSave={(fields) => handleSaveCorporates({ otherGames: fields }, "Other Games")}
+              isSaving={updateHomeMutation.isPending}
+            />
+          </div>
         )}
       </div>
     </div>
