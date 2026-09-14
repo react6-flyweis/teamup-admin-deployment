@@ -9,6 +9,7 @@ import VenuesIcon from '@/assets/icons/VenuesIcon';
 import HeaderIcon from '@/assets/icons/HeaderIcon';
 import SocialReviewsIcon from '@/assets/icons/SocailReviewsIcon';
 import FooterIcon from '@/assets/icons/FooterIcon';
+import CorporateIcon from '@/assets/icons/CorporateIcon';
 import EnquiriesIcon from '@/assets/icons/EnquiriesIcon';
 import SecurityIcon from '@/assets/icons/SecurityIcon';
 import UserIcon from '@/assets/icons/UserIcon';
@@ -48,6 +49,14 @@ export const navigationItems: NavigationItem[] = [
     path: '/manage-footer',
     permission: 'manage_footer',
     tabId: 'manage_footer',
+  },
+  {
+    id: 'manage-corporate',
+    label: 'Corporates',
+    icon: CorporateIcon,
+    path: '/manage-corporate',
+    permission: 'manage_home',
+    tabId: 'manage_home',
   },
   {
     id: 'game-venue',

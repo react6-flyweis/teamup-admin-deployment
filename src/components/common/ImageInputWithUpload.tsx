@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { uploadFile } from '@/utils/fileUpload';
 import UploadIcon from '@/assets/icons/UploadIcon';
 
@@ -33,6 +33,26 @@ const parseAspectRatio = (aspectRatio?: string, hint?: string): { cssRatio: stri
   return null;
 };
 
+const resolvePreviewUrl = (url: string): string => {
+  if (!url) return '';
+  if (
+    url.startsWith('blob:') ||
+    url.startsWith('data:') ||
+    url.startsWith('http://') ||
+    url.startsWith('https://')
+  ) {
+    return url;
+  }
+  const apiBase = import.meta.env.VITE_API_URL || '';
+  try {
+    const origin = apiBase ? new URL(apiBase).origin : 'https://api.teamuparena.com';
+    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    return `${origin}${cleanPath}`;
+  } catch {
+    return url;
+  }
+};
+
 export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   value,
   onChange,
@@ -52,10 +72,25 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const [hasLoadError, setHasLoadError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const ratioInfo = parseAspectRatio(aspectRatio, hint);
   const fit = objectFit || (hint?.toLowerCase().includes('svg') || hint?.toLowerCase().includes('contain') || label?.toLowerCase().includes('icon') || label?.toLowerCase().includes('badge') ? 'contain' : 'cover');
+
+  // Reset load error and local preview if value changes externally
+  useEffect(() => {
+    setHasLoadError(false);
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (localPreview) {
+        URL.revokeObjectURL(localPreview);
+      }
+    };
+  }, [localPreview]);
 
   let widthClass = previewWidth;
   if (ratioInfo) {
@@ -73,6 +108,14 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Create an instant local object URL preview
+    const objectUrl = URL.createObjectURL(file);
+    if (localPreview) {
+      URL.revokeObjectURL(localPreview);
+    }
+    setLocalPreview(objectUrl);
+    setHasLoadError(false);
+
     setIsUploading(true);
     setError(null);
     try {
@@ -87,8 +130,13 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
       }
     } finally {
       setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
+
+  const previewSrc = localPreview || resolvePreviewUrl(value);
 
   return (
     <div className={className}>
@@ -106,7 +154,13 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
         <input
           type="text"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            if (localPreview) {
+              URL.revokeObjectURL(localPreview);
+              setLocalPreview(null);
+            }
+            onChange(e.target.value);
+          }}
           placeholder={placeholder}
           className={
             inputClassName ||
@@ -137,21 +191,38 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
         </button>
       </div>
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-      {showPreview && value && (
+      {showPreview && previewSrc && (
         <div
-          className={`mt-2 ${widthClass} ${ratioInfo ? 'h-auto' : previewHeight} rounded-lg overflow-hidden border border-[#3A3530] bg-[#1A1A1A] relative group shadow-sm`}
+          className={`mt-2 ${widthClass} ${ratioInfo ? 'h-auto' : previewHeight} rounded-lg overflow-hidden border border-[#3A3530] bg-[#1A1A1A] relative group shadow-sm flex items-center justify-center`}
           style={ratioInfo ? { aspectRatio: ratioInfo.cssRatio } : undefined}
         >
-          <img
-            src={value}
-            alt="Preview"
-            className={`w-full h-full ${fit === 'contain' ? 'object-contain p-1.5' : 'object-cover'}`}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-          {ratioInfo && (
-            <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[10px] text-gray-300 font-mono font-medium pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity">
+          {isUploading && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center z-10 text-white gap-1.5">
+              <span className="animate-spin rounded-full h-5 w-5 border-2 border-[#E1017D] border-t-transparent"></span>
+              <span className="text-[11px] font-medium text-gray-300">Uploading...</span>
+            </div>
+          )}
+
+          {hasLoadError && !isUploading ? (
+            <div className="flex flex-col items-center justify-center p-3 text-center text-gray-500">
+              <svg className="w-5 h-5 mb-1 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="text-[11px]">Preview unavailable</span>
+            </div>
+          ) : (
+            <img
+              key={previewSrc}
+              src={previewSrc}
+              alt="Preview"
+              className={`w-full h-full ${fit === 'contain' ? 'object-contain p-1.5' : 'object-cover'}`}
+              onLoad={() => setHasLoadError(false)}
+              onError={() => setHasLoadError(true)}
+            />
+          )}
+
+          {ratioInfo && !hasLoadError && (
+            <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[10px] text-gray-300 font-mono font-medium pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity z-20">
               {ratioInfo.label}
             </span>
           )}

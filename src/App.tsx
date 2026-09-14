@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Layout from "@/components/Layout";
 import Register from "@/pages/Register";
 import ManageHome from "@/pages/ManageHome";
+import ManageCorporate from "@/pages/ManageCorporate";
 import ManageHeader from "@/pages/ManageHeader";
 import ManageFooter from "@/pages/ManageFooter";
 import CategoryFormPage from "@/pages/ManageHeader/CategoryFormPage";
@@ -141,6 +142,16 @@ function App() {
                 </PermissionGuard>
               }
             />
+            <Route
+              path="manage-corporate"
+              element={
+                <PermissionGuard tabId="manage_home">
+                  <ManageCorporate />
+                </PermissionGuard>
+              }
+            />
+            <Route path="corporates" element={<Navigate to="/manage-corporate" replace />} />
+            <Route path="corporate" element={<Navigate to="/manage-corporate" replace />} />
             <Route
               path="game-venue"
               element={

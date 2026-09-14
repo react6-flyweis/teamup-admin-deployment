@@ -116,6 +116,18 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
           if (linkedGame.tags && linkedGame.tags.length > 0) {
             setTagsInput(linkedGame.tags.join(', '));
           }
+          if (linkedGame.peopleAllowedPerLane != null || gAny.peopleAllowedPerLane != null) {
+            setPeoplePerMachine(String(linkedGame.peopleAllowedPerLane ?? gAny.peopleAllowedPerLane));
+          }
+          if (linkedGame.totalLanes != null || gAny.totalLanes != null) {
+            setLanes(String(linkedGame.totalLanes ?? gAny.totalLanes));
+          }
+          if (linkedGame.minimumAgeRequirement || gAny.minimumAgeRequirement) {
+            setMinAge(linkedGame.minimumAgeRequirement || gAny.minimumAgeRequirement);
+          }
+          if (linkedGame.wheelchairAccessible !== undefined || gAny.wheelchairAccessible !== undefined) {
+            setWheelchairAccess(Boolean(linkedGame.wheelchairAccessible ?? gAny.wheelchairAccessible));
+          }
         }
       } else if (availableGames.length > 0) {
         // Try matching slug or ID with availableGames to preselect pre-existing game
@@ -143,6 +155,18 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
           setTimeMin(tVal);
           if (matchedGame.tags && matchedGame.tags.length > 0) {
             setTagsInput(matchedGame.tags.join(', '));
+          }
+          if (matchedGame.peopleAllowedPerLane != null || mAny.peopleAllowedPerLane != null) {
+            setPeoplePerMachine(String(matchedGame.peopleAllowedPerLane ?? mAny.peopleAllowedPerLane));
+          }
+          if (matchedGame.totalLanes != null || mAny.totalLanes != null) {
+            setLanes(String(matchedGame.totalLanes ?? mAny.totalLanes));
+          }
+          if (matchedGame.minimumAgeRequirement || mAny.minimumAgeRequirement) {
+            setMinAge(matchedGame.minimumAgeRequirement || mAny.minimumAgeRequirement);
+          }
+          if (matchedGame.wheelchairAccessible !== undefined || mAny.wheelchairAccessible !== undefined) {
+            setWheelchairAccess(Boolean(matchedGame.wheelchairAccessible ?? mAny.wheelchairAccessible));
           }
         }
       }
@@ -175,6 +199,18 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
       }
       if (foundGame.tags && foundGame.tags.length > 0) {
         setTagsInput(foundGame.tags.join(', '));
+      }
+      if (foundGame.peopleAllowedPerLane != null || fAny.peopleAllowedPerLane != null) {
+        setPeoplePerMachine(String(foundGame.peopleAllowedPerLane ?? fAny.peopleAllowedPerLane));
+      }
+      if (foundGame.totalLanes != null || fAny.totalLanes != null) {
+        setLanes(String(foundGame.totalLanes ?? fAny.totalLanes));
+      }
+      if (foundGame.minimumAgeRequirement || fAny.minimumAgeRequirement) {
+        setMinAge(foundGame.minimumAgeRequirement || fAny.minimumAgeRequirement);
+      }
+      if (foundGame.wheelchairAccessible !== undefined || fAny.wheelchairAccessible !== undefined) {
+        setWheelchairAccess(Boolean(foundGame.wheelchairAccessible ?? fAny.wheelchairAccessible));
       }
     }
   };
@@ -230,6 +266,9 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
             .map(t => t.trim())
             .filter(Boolean);
 
+          const parsedPeople = parseInt(peoplePerMachine.replace(/[^0-9]/g, ''), 10);
+          const parsedLanes = parseInt(lanes.replace(/[^0-9]/g, ''), 10);
+
           await apiClient.patch(`/games/${targetGameId}`, {
             name: pageHeadline.trim(), // Explicitly Hero Headline / Game Name only
             gameName: pageHeadline.trim(),
@@ -242,6 +281,10 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
             timeOption: timeMin,
             priceFrom: isNaN(numPrice) ? 45 : numPrice,
             pricePerPerson: isNaN(numPrice) ? undefined : numPrice,
+            peopleAllowedPerLane: isNaN(parsedPeople) ? undefined : parsedPeople,
+            totalLanes: isNaN(parsedLanes) ? undefined : parsedLanes,
+            minimumAgeRequirement: minAge,
+            wheelchairAccessible: wheelchairAccess,
             tags: parsedTags.length > 0 ? parsedTags : ['family', 'indoor', 'featured'],
             isActive: true,
           });

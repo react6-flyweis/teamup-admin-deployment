@@ -88,6 +88,56 @@ export interface NewsletterSectionData {
   isActive?: boolean;
 }
 
+export interface CorporatePackageItem {
+  title: string;
+  price: string;
+  iconUrl: string;
+  details: string[];
+  buttonText: string;
+  buttonLink: string;
+}
+
+export interface CorporateBookOnlineData {
+  title: string;
+  body: string;
+  imageUrl: string;
+  buttonText: string;
+  buttonLink: string;
+}
+
+export interface CorporatePrivateHireData {
+  title: string;
+  body: string;
+  imageUrl: string;
+  buttonText: string;
+  buttonLink: string;
+}
+
+export interface CorporateOtherGameItem {
+  title: string;
+  imageUrl: string;
+  bookNowLink: string;
+  learnMoreLink: string;
+}
+
+export interface CorporateOtherGamesData {
+  title: string;
+  items: CorporateOtherGameItem[];
+}
+
+export interface CorporatesData {
+  pageUrl?: string;
+  heroTitle?: string;
+  heroImageUrl?: string;
+  packagesTitle?: string;
+  packagesDescription?: string;
+  packages?: CorporatePackageItem[];
+  budgetText?: string;
+  bookOnline?: CorporateBookOnlineData;
+  privateHire?: CorporatePrivateHireData;
+  otherGames?: CorporateOtherGamesData;
+}
+
 export interface HomeData {
   topBanner?: TopBannerData;
   hero?: HeroData;
@@ -96,6 +146,7 @@ export interface HomeData {
   bitesEvents?: BitesEventsData;
   newsletter?: NewsletterSectionData;
   signUp?: NewsletterSectionData;
+  corporates?: CorporatesData;
 }
 
 export interface HomeContent {
