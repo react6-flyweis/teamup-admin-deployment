@@ -5,7 +5,7 @@ import { CloseIcon } from '@/assets/icons';
 
 interface FooterLinkModalProps {
   initialLabel: string;
-  initialUrl: string;
+  initialUrl?: string;
   initialContent?: string;
   isAdding: boolean;
   onSave: (label: string, url: string, content: string) => Promise<void>;
@@ -14,14 +14,14 @@ interface FooterLinkModalProps {
 
 const FooterLinkModal: React.FC<FooterLinkModalProps> = ({ 
   initialLabel, 
-  initialUrl, 
+  initialUrl = '', 
   initialContent = '', 
   isAdding, 
   onSave, 
   onClose 
 }) => {
   const [label, setLabel] = useState(initialLabel);
-  const [url, setUrl] = useState(initialUrl);
+  const [url] = useState(initialUrl);
   const [content, setContent] = useState(initialContent);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,15 +41,19 @@ const FooterLinkModal: React.FC<FooterLinkModalProps> = ({
       setErrorMsg('Link label is required');
       return;
     }
-    if (!url.trim()) {
-      setErrorMsg('Internal URL path is required');
-      return;
-    }
+
+    const computedSlug = label
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    const resolvedUrl = url.trim() || `/${computedSlug}`;
 
     setErrorMsg(null);
     setIsSaving(true);
     try {
-      await onSave(label, url, content);
+      await onSave(label, resolvedUrl, content);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } }; message?: string };
       const msg = error?.response?.data?.message || error?.message || 'Failed to save. Please try again.';
@@ -72,30 +76,16 @@ const FooterLinkModal: React.FC<FooterLinkModalProps> = ({
         </div>
 
         <div className="p-6 overflow-y-auto flex-1">
-
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Link Label</label>
-              <input
-                type="text"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                disabled={isSaving}
-                className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white disabled:opacity-50"
-                placeholder="e.g. ABOUT US"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Internal URL Path</label>
-              <input
-                type="text"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                disabled={isSaving}
-                className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white disabled:opacity-50"
-                placeholder="e.g. /about"
-              />
-            </div>
+          <div className="mb-6">
+            <label className="block text-sm text-gray-400 mb-2">Link Label</label>
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              disabled={isSaving}
+              className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white disabled:opacity-50"
+              placeholder="e.g. ABOUT US"
+            />
           </div>
 
           <div>
