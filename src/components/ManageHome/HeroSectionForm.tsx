@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { HeroSection } from './types';
 import Toggle from '@/components/common/Toggle';
 import TeamUpLogo from '@/assets/TeamUp.png';
-import FileUploader from '@/components/common/FileUploader';
+import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
 import { useHeaderCategoriesQuery } from '@/hooks/useHeaderCategories';
 import { useLocationsQuery } from '@/hooks/useLocations';
 
@@ -21,6 +21,7 @@ const HeroSectionForm: React.FC<HeroSectionFormProps> = ({
 }) => {
   const [data, setData] = useState<HeroSection>(initialData);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'video' | 'image'>('video');
   const { data: categoriesData } = useHeaderCategoriesQuery();
   const { data: locationsData } = useLocationsQuery();
   const categories = categoriesData?.categories || [];
@@ -115,12 +116,42 @@ const HeroSectionForm: React.FC<HeroSectionFormProps> = ({
           )}
           {/* Hero Section Preview */}
           <div className="w-full h-[350px] relative flex flex-col justify-center items-center text-center">
-            {data.backgroundMediaUrl ? (
-              data.backgroundMediaUrl.match(/\.(mp4|webm|ogg|mov)$/i) || data.backgroundMediaUrl.includes('video') ? (
-                <video src={data.backgroundMediaUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-60" />
-              ) : (
-                <img src={data.backgroundMediaUrl} alt="Background Preview" className="absolute inset-0 w-full h-full object-cover opacity-60" />
-              )
+            {/* Toggle Preview mode if video is available */}
+            {data.videoUrl && (
+              <div className="absolute top-4 right-4 z-20 flex items-center bg-black/80 backdrop-blur-md p-1 rounded-lg border border-[#3A3530] text-xs shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('video')}
+                  className={`px-3 py-1 rounded transition-colors ${previewMode === 'video' ? 'bg-[#E1017D] text-white font-medium' : 'text-gray-400 hover:text-white'}`}
+                >
+                  ▶ Video View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('image')}
+                  className={`px-3 py-1 rounded transition-colors ${previewMode === 'image' ? 'bg-[#E1017D] text-white font-medium' : 'text-gray-400 hover:text-white'}`}
+                >
+                  🖼 Poster View
+                </button>
+              </div>
+            )}
+
+            {data.videoUrl && previewMode === 'video' ? (
+              <video
+                src={data.videoUrl}
+                poster={data.backgroundMediaUrl || undefined}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover opacity-60"
+              />
+            ) : data.backgroundMediaUrl ? (
+              <img
+                src={data.backgroundMediaUrl}
+                alt="Background Preview"
+                className="absolute inset-0 w-full h-full object-cover opacity-60"
+              />
             ) : (
               <div className="absolute inset-0 bg-gray-900 bg-opacity-80" />
             )}
@@ -169,23 +200,52 @@ const HeroSectionForm: React.FC<HeroSectionFormProps> = ({
         <h3 className="text-lg font-medium text-white mb-4">Hero Banner</h3>
 
         <div className="space-y-6">
-          {/* Background Video */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Background Media (Image or Video) <span className="text-xs text-gray-400 font-normal ml-1.5">(16:9 • Rec: 1920×1080 or 2560×1440 px • WebP/JPG/MP4)</span>
-            </label>
-            <FileUploader
+          {/* Background Image (Photo / Fallback Poster) */}
+          <div className="bg-[#242424] border border-[#3A3530] rounded-xl p-5">
+            <ImageInputWithUpload
+              label="Hero Background Photo (Initial / Fallback Poster)"
+              hint="16:9 • Rec: 1920×1080 or 2560×1440 px • WebP/JPG/PNG"
               value={data.backgroundMediaUrl}
               onChange={(url) => setData({ ...data, backgroundMediaUrl: url })}
+              placeholder="Paste photo URL or click upload"
+              accept="image/*"
               aspectRatio="16:9"
+              previewWidth="w-full max-w-xl"
+              inputClassName="w-full h-10 px-3 rounded bg-[#1C1C1C] border border-[#3A3530] text-white text-sm focus:border-[#E1017D] focus:outline-none"
             />
-            <input
-              type="text"
-              value={data.backgroundMediaUrl}
-              onChange={(e) => setData({ ...data, backgroundMediaUrl: e.target.value })}
-              className="w-full h-10 px-4 mt-3 rounded bg-[#2A2A2A] border border-[#3A3530] text-white text-sm"
-              placeholder="https://..."
+            <p className="text-xs text-gray-400 mt-2">
+              Displays immediately as the initial poster while the video loads, and serves as the fallback on mobile low-power mode or slow connections.
+            </p>
+          </div>
+
+          {/* Background Video (Optional) */}
+          <div className="bg-[#242424] border border-[#3A3530] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-400 font-medium">Hero Background Video (Optional)</span>
+              {data.videoUrl && (
+                <button
+                  type="button"
+                  onClick={() => setData({ ...data, videoUrl: '' })}
+                  className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded bg-red-950/40 border border-red-900/50 hover:bg-red-900/40 transition-colors"
+                >
+                  Remove Video
+                </button>
+              )}
+            </div>
+            <ImageInputWithUpload
+              hint="16:9 • MP4/WebM"
+              value={data.videoUrl || ''}
+              onChange={(url) => setData({ ...data, videoUrl: url })}
+              placeholder="Paste video URL or click upload"
+              accept="video/*"
+              aspectRatio="16:9"
+              previewWidth="w-full max-w-xl"
+              buttonText="Upload Video"
+              inputClassName="w-full h-10 px-3 rounded bg-[#1C1C1C] border border-[#3A3530] text-white text-sm focus:border-[#E1017D] focus:outline-none"
             />
+            <p className="text-xs text-gray-400 mt-2">
+              Autoplays in a loop behind the hero section. Leave empty to use only the background photo.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
