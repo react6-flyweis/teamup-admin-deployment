@@ -21,6 +21,7 @@ export interface Location {
   email?: string;
   openingHours?: LocationOpeningHour[];
   mapEmbedUrl?: string;
+  mapImage?: string;
   latitude?: number;
   longitude?: number;
   isActive: boolean;
@@ -70,6 +71,7 @@ export interface CreateLocationPayload {
   phone?: string;
   email?: string;
   mapEmbedUrl?: string;
+  mapImage?: string;
   openingHours?: LocationOpeningHour[];
   isActive?: boolean;
 }
@@ -84,6 +86,7 @@ export interface UpdateLocationPayload {
   phone?: string;
   email?: string;
   mapEmbedUrl?: string;
+  mapImage?: string;
   openingHours?: LocationOpeningHour[];
   isActive?: boolean;
 }
