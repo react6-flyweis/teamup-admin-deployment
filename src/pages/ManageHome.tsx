@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import HeroSectionForm from "@/components/ManageHome/HeroSectionForm";
+import type { HeroSection } from "@/components/ManageHome/types";
 import BoomBundlesForm from "@/components/ManageHome/BoomBundlesForm";
 import LocationHoursForm from "@/components/ManageHome/LocationHoursForm";
 import ChooseGamesForm from "@/components/ManageHome/ChooseGamesForm";
 import BitesAndEventsForm from "@/components/ManageHome/BitesAndEventsForm";
 import NewsletterSectionForm from "@/components/ManageHome/NewsletterSectionForm";
+import MainBackgroundForm from "@/components/ManageHome/MainBackgroundForm";
 
 import {
   useHomeQuery,
@@ -14,7 +16,7 @@ import {
 import { useLocationStore } from "@/store/locationStore";
 import SuccessModal from "@/components/common/SuccessModal";
 
-type Tab = "hero" | "bundles" | "location" | "games" | "bites" | "newsletter";
+type Tab = "hero" | "mainBg" | "bundles" | "location" | "games" | "bites" | "newsletter";
 
 const ManageHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("hero");
@@ -36,6 +38,7 @@ const ManageHome: React.FC = () => {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "hero", label: "Hero Banner" },
+    { id: "mainBg", label: "Main Background" },
     { id: "bundles", label: "Boom Bundles" },
     { id: "location", label: "Location & Hours" },
     { id: "games", label: "Choose Game" },
@@ -70,6 +73,7 @@ const ManageHome: React.FC = () => {
     title: rawData?.hero?.title || "",
     subtitle: rawData?.hero?.subtitle || "",
     backgroundMediaUrl: rawData?.hero?.backgroundMediaUrl || "",
+    videoUrl: rawData?.hero?.videoUrl || "",
     buttons: {
       primaryText: rawData?.hero?.primaryButton?.text || "",
       primaryLink: rawData?.hero?.primaryButton?.link || "",
@@ -129,6 +133,8 @@ const ManageHome: React.FC = () => {
     isActive: rawData?.newsletter?.isActive ?? true,
   };
 
+  const mainBgData = rawData?.mainBg || "";
+
   const getErrorMessage = (err: unknown, fallback: string): string => {
     if (err && typeof err === "object") {
       const axiosErr = err as {
@@ -141,7 +147,7 @@ const ManageHome: React.FC = () => {
   };
 
   // Save callback handlers
-  const handleSaveHero = (heroFields: typeof heroData) => {
+  const handleSaveHero = (heroFields: HeroSection) => {
     setErrorSection(null);
     setSavingSection("hero");
     updateHomeMutation.mutate(
@@ -153,6 +159,7 @@ const ManageHome: React.FC = () => {
           },
           hero: {
             backgroundMediaUrl: heroFields.backgroundMediaUrl,
+            videoUrl: heroFields.videoUrl || "",
             title: heroFields.title,
             subtitle: heroFields.subtitle,
             primaryButton: {
@@ -181,6 +188,37 @@ const ManageHome: React.FC = () => {
             message: getErrorMessage(
               err,
               "Failed to update Hero Banner. Please try again.",
+            ),
+          });
+        },
+      },
+    );
+  };
+
+  const handleSaveMainBg = (bgUrl: string) => {
+    setErrorSection(null);
+    setSavingSection("mainBg");
+    updateHomeMutation.mutate(
+      {
+        data: {
+          mainBg: bgUrl,
+        },
+      },
+      {
+        onSuccess: () => {
+          setSavingSection(null);
+          setSuccessModalData({
+            title: "Main Background Saved!",
+            message: "Main background has been updated successfully.",
+          });
+        },
+        onError: (err: unknown) => {
+          setSavingSection(null);
+          setErrorSection({
+            section: "mainBg",
+            message: getErrorMessage(
+              err,
+              "Failed to update Main Background. Please try again.",
             ),
           });
         },
@@ -399,6 +437,18 @@ const ManageHome: React.FC = () => {
             isSaving={savingSection === "hero"}
             errorMessage={
               errorSection?.section === "hero" ? errorSection.message : null
+            }
+          />
+        )}
+        {activeTab === "mainBg" && (
+          <MainBackgroundForm
+            initialData={mainBgData}
+            onSave={handleSaveMainBg}
+            isSaving={savingSection === "mainBg"}
+            errorMessage={
+              errorSection?.section === "mainBg"
+                ? errorSection.message
+                : null
             }
           />
         )}
