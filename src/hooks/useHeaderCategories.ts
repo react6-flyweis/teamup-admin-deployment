@@ -32,10 +32,21 @@ export const useCreateCategoryMutation = () => {
 export const useUpdateCategoryMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ categoryId, name, isActive }: { categoryId: string; name?: string; isActive?: boolean }) => {
+    mutationFn: async ({
+      categoryId,
+      name,
+      isActive,
+      isHidden,
+    }: {
+      categoryId: string;
+      name?: string;
+      isActive?: boolean;
+      isHidden?: boolean;
+    }) => {
       const payload: Record<string, unknown> = {};
       if (name !== undefined) payload.name = name;
       if (isActive !== undefined) payload.isActive = isActive;
+      if (isHidden !== undefined) payload.isHidden = isHidden;
 
       const response = await apiClient.patch(`/menu-items/categories/${categoryId}`, payload);
       return response.data;
