@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { uploadFile } from '@/utils/fileUpload';
 import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
-import type { HeaderSubItem, FeaturedEventCard, ChecklistItem } from './types';
+import type { HeaderSubItem, FeaturedEventCard, ChecklistItem } from '@/components/ManageHeader/types';
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 
 interface TeamPartiesFormProps {
-    onClose: () => void;
-  onSave: (subItem: Partial<HeaderSubItem>) => void;
+  onClose: () => void;
+  onSave: (subItem: Partial<HeaderSubItem>) => void | Promise<void>;
   initialData: HeaderSubItem | null;
   availableGames: HeaderSubItem[];
+  isSaving?: boolean;
 }
 
 const TeamPartiesForm: React.FC<TeamPartiesFormProps> = ({
-  onClose, onSave, initialData, availableGames
+  onClose, onSave, initialData, availableGames, isSaving = false
 }) => {
   // Navigation
   const [name, setName] = useState('');
@@ -454,8 +455,13 @@ const TeamPartiesForm: React.FC<TeamPartiesFormProps> = ({
             <button type="button" onClick={onClose} className="px-5 py-2 rounded-lg font-medium text-gray-300 hover:text-white hover:bg-[#2A2A2A] transition-colors">
               Cancel
             </button>
-            <button type="submit" disabled={!name.trim() || !path.trim()} className="bg-[#E1017D] text-white px-6 py-2 rounded-lg font-medium hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              Save Sub-item
+            <button
+              type="submit"
+              disabled={!name.trim() || !path.trim() || isSaving}
+              className="bg-[#E1017D] text-white px-6 py-2 rounded-lg font-medium hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isSaving && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+              {isSaving ? 'Saving...' : 'Save Sub-item'}
             </button>
           </div>
         </form>
