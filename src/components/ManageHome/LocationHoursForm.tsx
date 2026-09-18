@@ -1,16 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import type { LocationInfo } from './types';
-import { useLocationStore } from '@/store/locationStore';
-import { useUpdateLocationMutation, useLocationsQuery, type LocationOpeningHour } from '@/hooks/useLocations';
-import SuccessModal from '@/components/common/SuccessModal';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import type { LocationInfo } from "./types";
+import { useLocationStore } from "@/store/locationStore";
+import {
+  useUpdateLocationMutation,
+  useLocationsQuery,
+  type LocationOpeningHour,
+} from "@/hooks/useLocations";
+import SuccessModal from "@/components/common/SuccessModal";
+import ImageInputWithUpload from "@/components/common/ImageInputWithUpload";
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 const formatTimeTo24 = (timeStr?: string): string => {
-  if (!timeStr) return '';
+  if (!timeStr) return "";
   const trimmed = timeStr.trim();
-  if (trimmed.toLowerCase() === 'closed') return 'Closed';
+  if (trimmed.toLowerCase() === "closed") return "Closed";
 
   // 12-hour format e.g. "09:00 AM", "9:00 am", "2:30 PM", "12:00 AM"
   const match12 = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)$/i);
@@ -18,15 +31,15 @@ const formatTimeTo24 = (timeStr?: string): string => {
     let hours = parseInt(match12[1], 10);
     const minutes = match12[2];
     const modifier = match12[3].toUpperCase();
-    if (modifier === 'PM' && hours < 12) hours += 12;
-    if (modifier === 'AM' && hours === 12) hours = 0;
-    return `${String(hours).padStart(2, '0')}:${minutes}`;
+    if (modifier === "PM" && hours < 12) hours += 12;
+    if (modifier === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
   }
 
   // 24-hour format e.g. "09:00", "9:00", "17:00", "09:00:00"
   const match24 = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   if (match24) {
-    const hours = match24[1].padStart(2, '0');
+    const hours = match24[1].padStart(2, "0");
     return `${hours}:${match24[2]}`;
   }
 
@@ -36,21 +49,23 @@ const formatTimeTo24 = (timeStr?: string): string => {
 const getDefaultHours = (existingHours?: LocationOpeningHour[]) => {
   return DAYS.map((day, idx) => {
     const existing = existingHours?.find(
-      (h) => h.day.toLowerCase() === day.toLowerCase()
+      (h) => h.day.toLowerCase() === day.toLowerCase(),
     );
     if (existing) {
       return {
         id: String(idx + 1),
         day,
-        openTime: existing.isClosed ? 'Closed' : formatTimeTo24(existing.open),
-        closeTime: existing.isClosed ? 'Closed' : formatTimeTo24(existing.close),
+        openTime: existing.isClosed ? "Closed" : formatTimeTo24(existing.open),
+        closeTime: existing.isClosed
+          ? "Closed"
+          : formatTimeTo24(existing.close),
       };
     }
     return {
       id: String(idx + 1),
       day,
-      openTime: '',
-      closeTime: '',
+      openTime: "",
+      closeTime: "",
     };
   });
 };
@@ -66,8 +81,9 @@ const LocationHoursForm: React.FC = () => {
   const currentLocation = selectedLocation || locationsData?.locations?.[0];
 
   const [data, setData] = useState<LocationInfo>({
-    address: '',
-    mapEmbedUrl: '',
+    address: "",
+    mapEmbedUrl: "",
+    mapImage: "",
     hours: getDefaultHours(),
   });
 
@@ -81,8 +97,9 @@ const LocationHoursForm: React.FC = () => {
   useEffect(() => {
     if (currentLocation) {
       setData({
-        address: currentLocation.address || '',
-        mapEmbedUrl: currentLocation.mapEmbedUrl || '',
+        address: currentLocation.address || "",
+        mapEmbedUrl: currentLocation.mapEmbedUrl || "",
+        mapImage: currentLocation.mapImage || "",
         hours: getDefaultHours(currentLocation.openingHours),
       });
     }
@@ -91,7 +108,7 @@ const LocationHoursForm: React.FC = () => {
   const handleSave = () => {
     const targetLocationId = currentLocation?._id;
     if (!targetLocationId) {
-      setErrorMessage('No location available to update.');
+      setErrorMessage("No location available to update.");
       return;
     }
 
@@ -100,12 +117,14 @@ const LocationHoursForm: React.FC = () => {
     const payload = {
       address: data.address,
       mapEmbedUrl: data.mapEmbedUrl,
+      mapImage: data.mapImage,
       openingHours: data.hours.map((hour) => {
-        const isClosed = hour.openTime === 'Closed' || hour.closeTime === 'Closed';
+        const isClosed =
+          hour.openTime === "Closed" || hour.closeTime === "Closed";
         return {
           day: hour.day,
-          open: isClosed ? '' : hour.openTime,
-          close: isClosed ? '' : hour.closeTime,
+          open: isClosed ? "" : hour.openTime,
+          close: isClosed ? "" : hour.closeTime,
           isClosed,
         };
       }),
@@ -123,20 +142,24 @@ const LocationHoursForm: React.FC = () => {
           } else if (err instanceof Error) {
             setErrorMessage(err.message);
           } else {
-            setErrorMessage('Failed to update location details.');
+            setErrorMessage("Failed to update location details.");
           }
         },
-      }
+      },
     );
   };
 
   return (
     <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#3A3530]">
-      <h2 className="text-xl font-semibold text-white mb-6">Location & Hours</h2>
+      <h2 className="text-xl font-semibold text-white mb-6">
+        Location & Hours
+      </h2>
 
       <div className="space-y-6">
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Full Address</label>
+          <label className="block text-sm text-gray-400 mb-2">
+            Full Address
+          </label>
           <input
             type="text"
             value={data.address}
@@ -147,7 +170,9 @@ const LocationHoursForm: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-2">Google Maps Embed URL</label>
+          <label className="block text-sm text-gray-400 mb-2">
+            Google Maps URL
+          </label>
           <input
             type="text"
             value={data.mapEmbedUrl}
@@ -158,14 +183,38 @@ const LocationHoursForm: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-4">Operating Hours</label>
+          <ImageInputWithUpload
+            label="Location Map Image"
+            labelClassName="block text-sm text-gray-400 mb-2"
+            hint="PNG, JPG, WebP"
+            value={data.mapImage || ""}
+            onChange={(url) => setData({ ...data, mapImage: url })}
+            placeholder="Paste map image URL or upload image"
+            accept="image/*"
+            previewHeight="h-36"
+            previewWidth="w-56"
+            inputClassName="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white text-sm focus:outline-none focus:border-[#E1017D]"
+            buttonClassName="h-10 px-4 rounded bg-[#2A2A2A] hover:bg-[#3A3530] text-white text-sm border border-[#3A3530] shrink-0 disabled:opacity-50 flex items-center gap-2 transition-colors cursor-pointer"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-400 mb-4">
+            Operating Hours
+          </label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {data.hours.map((hour, index) => {
-              const isClosed = hour.openTime === 'Closed' || hour.closeTime === 'Closed';
+              const isClosed =
+                hour.openTime === "Closed" || hour.closeTime === "Closed";
               return (
-                <div key={hour.id} className="flex items-center gap-3 p-3 border border-[#3A3530] rounded bg-[#222222]">
-                  <div className="w-24 text-sm font-medium text-white">{hour.day}</div>
-                  
+                <div
+                  key={hour.id}
+                  className="flex items-center gap-3 p-3 border border-[#3A3530] rounded bg-[#222222]"
+                >
+                  <div className="w-24 text-sm font-medium text-white">
+                    {hour.day}
+                  </div>
+
                   <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -173,11 +222,11 @@ const LocationHoursForm: React.FC = () => {
                       onChange={(e) => {
                         const newHours = [...data.hours];
                         if (e.target.checked) {
-                          newHours[index].openTime = 'Closed';
-                          newHours[index].closeTime = 'Closed';
+                          newHours[index].openTime = "Closed";
+                          newHours[index].closeTime = "Closed";
                         } else {
-                          newHours[index].openTime = '09:00';
-                          newHours[index].closeTime = '17:00';
+                          newHours[index].openTime = "09:00";
+                          newHours[index].closeTime = "17:00";
                         }
                         setData({ ...data, hours: newHours });
                       }}
@@ -189,10 +238,12 @@ const LocationHoursForm: React.FC = () => {
                   <div className="relative flex-1">
                     <input
                       type="time"
-                      value={isClosed ? '' : hour.openTime}
+                      value={isClosed ? "" : hour.openTime}
                       disabled={isClosed}
                       aria-label={`${hour.day} opening time`}
-                      title={isClosed ? 'Closed' : 'Click to select opening time'}
+                      title={
+                        isClosed ? "Closed" : "Click to select opening time"
+                      }
                       onClick={(e) => {
                         if (!isClosed) {
                           try {
@@ -214,10 +265,12 @@ const LocationHoursForm: React.FC = () => {
                   <div className="relative flex-1">
                     <input
                       type="time"
-                      value={isClosed ? '' : hour.closeTime}
+                      value={isClosed ? "" : hour.closeTime}
                       disabled={isClosed}
                       aria-label={`${hour.day} closing time`}
-                      title={isClosed ? 'Closed' : 'Click to select closing time'}
+                      title={
+                        isClosed ? "Closed" : "Click to select closing time"
+                      }
                       onClick={(e) => {
                         if (!isClosed) {
                           try {
@@ -241,7 +294,7 @@ const LocationHoursForm: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="mt-8 flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
         {errorMessage && (
           <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-3.5 py-2 rounded-lg">
@@ -251,13 +304,16 @@ const LocationHoursForm: React.FC = () => {
         <button
           type="button"
           onClick={handleSave}
-          disabled={updateLocation.isPending || (!currentLocation && !locationsData?.locations?.length)}
+          disabled={
+            updateLocation.isPending ||
+            (!currentLocation && !locationsData?.locations?.length)
+          }
           className="bg-[#E1017D] hover:bg-[#c0016a] disabled:bg-[#e1017d]/50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors cursor-pointer flex items-center gap-2"
         >
           {updateLocation.isPending && (
             <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
           )}
-          {updateLocation.isPending ? 'Saving...' : 'Save Changes'}
+          {updateLocation.isPending ? "Saving..." : "Save Changes"}
         </button>
       </div>
 
@@ -273,4 +329,3 @@ const LocationHoursForm: React.FC = () => {
 };
 
 export default LocationHoursForm;
-
