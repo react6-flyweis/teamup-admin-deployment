@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { uploadFile } from '@/utils/fileUpload';
 import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
-import type { HeaderSubItem, FeaturedEventCard, ChecklistItem } from './types';
+import type { HeaderSubItem, FeaturedEventCard, ChecklistItem } from '@/components/ManageHeader/types';
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 
 interface BoomBundleFormProps {
-    onClose: () => void;
+  onClose: () => void;
   initialData?: HeaderSubItem | null;
-  onSave: (data: HeaderSubItem) => void;
+  onSave: (data: HeaderSubItem) => void | Promise<void>;
+  isSaving?: boolean;
 }
 
-const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, onSave }) => {
+const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, onSave, isSaving = false }) => {
   // Navigation & Identifiers
   const [name, setName] = useState('');
   const [path, setPath] = useState('');
@@ -240,7 +241,7 @@ const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, o
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {checklistItems.map((item, index) => (
+                  {checklistItems.map((item) => (
                     <div key={item.id} className="flex gap-3 items-start bg-[#1C1C1C] p-3 rounded-lg border border-[#3A3530]">
                       <div className="flex-1 space-y-2">
                         <input type="text" value={item.title} onChange={e => updateChecklistItem(item.id, 'title', e.target.value)} placeholder={`Title (e.g. 1 X FULL LENGTH GAME)`} className={inputSmCls} />
@@ -355,8 +356,14 @@ const BoomBundleForm: React.FC<BoomBundleFormProps> = ({ onClose, initialData, o
           <button type="button" onClick={onClose} className="px-6 py-2.5 text-sm font-medium text-gray-300 hover:text-white transition-colors">
             Cancel
           </button>
-          <button type="submit" form="boom-bundle-form" className="px-6 py-2.5 bg-[#E1017D] text-white text-sm font-medium rounded-lg hover:bg-[#C0006A] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#E1017D]/20">
-            Save Changes
+          <button
+            type="submit"
+            form="boom-bundle-form"
+            disabled={isSaving}
+            className="px-6 py-2.5 bg-[#E1017D] text-white text-sm font-medium rounded-lg hover:bg-[#C0006A] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#E1017D]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSaving && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
