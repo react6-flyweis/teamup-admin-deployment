@@ -26,6 +26,7 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
   const [editingSubItem, setEditingSubItem] = useState<HeaderSubItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<HeaderSubItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [updatingSubItemIds, setUpdatingSubItemIds] = useState<Record<string, boolean>>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,28 +39,36 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleVisibility = (id: string) => {
+  const toggleVisibility = async (id: string) => {
     const item = subItems.find(i => i.id === id);
-    if (!item) return;
+    if (!item || updatingSubItemIds[id]) return;
     const previousSubItems = [...subItems];
-    const newIsActive = !!item.isHidden;
+    const isCurrentlyActive = item.isActive !== undefined ? item.isActive : !item.isHidden;
+    const newIsActive = !isCurrentlyActive;
 
     // Optimistically update parent state
     onUpdate(subItems.map(i => 
-      i.id === id ? { ...i, isHidden: !i.isHidden, isActive: newIsActive } : i
+      i.id === id ? { ...i, isHidden: !newIsActive, isActive: newIsActive } : i
     ));
 
-    // Send status update API request with rollback on error
-    updateMenuItemMutation.mutate(
-      { menuItemId: id, payload: { isActive: newIsActive } },
-      {
-        onError: (err) => {
-          console.error('Error updating sub-item visibility:', err);
-          onUpdate(previousSubItems);
-          queryClient.invalidateQueries({ queryKey: ['header-categories'] });
-        },
-      }
-    );
+    setUpdatingSubItemIds(prev => ({ ...prev, [id]: true }));
+
+    try {
+      await updateMenuItemMutation.mutateAsync({
+        menuItemId: id,
+        payload: { isActive: newIsActive, isHidden: !newIsActive },
+      });
+    } catch (err) {
+      console.error('Error updating sub-item visibility:', err);
+      onUpdate(previousSubItems);
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+    } finally {
+      setUpdatingSubItemIds(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   };
 
   const confirmDeleteSubItem = async () => {
@@ -211,8 +220,10 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
                 <div className="flex items-center gap-3">
                   <div title={item.isHidden ? "Show Item" : "Hide Item"}>
                     <Toggle 
-                      checked={!item.isHidden}
+                      checked={item.isActive !== undefined ? item.isActive : !item.isHidden}
                       onChange={() => toggleVisibility(item.id)}
+                      loading={!!updatingSubItemIds[item.id]}
+                      disabled={!!updatingSubItemIds[item.id]}
                       activeColor="#10A200"
                       inactiveColor="#EC221F"
                     />
