@@ -3,6 +3,7 @@ import axios from 'axios';
 import type { LocationInfo } from './types';
 import { useLocationStore } from '@/store/locationStore';
 import { useUpdateLocationMutation, useLocationsQuery, type LocationOpeningHour } from '@/hooks/useLocations';
+import SuccessModal from '@/components/common/SuccessModal';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -59,8 +60,8 @@ const LocationHoursForm: React.FC = () => {
   const { data: locationsData } = useLocationsQuery();
   const updateLocation = useUpdateLocationMutation();
 
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const currentLocation = selectedLocation || locationsData?.locations?.[0];
 
@@ -94,7 +95,6 @@ const LocationHoursForm: React.FC = () => {
       return;
     }
 
-    setSuccessMessage(null);
     setErrorMessage(null);
 
     const payload = {
@@ -115,8 +115,7 @@ const LocationHoursForm: React.FC = () => {
       { locationId: targetLocationId, payload },
       {
         onSuccess: () => {
-          setSuccessMessage('Location details updated successfully!');
-          setTimeout(() => setSuccessMessage(null), 3000);
+          setShowSuccessModal(true);
         },
         onError: (err: unknown) => {
           if (axios.isAxiosError(err)) {
@@ -134,17 +133,6 @@ const LocationHoursForm: React.FC = () => {
   return (
     <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#3A3530]">
       <h2 className="text-xl font-semibold text-white mb-6">Location & Hours</h2>
-
-      {successMessage && (
-        <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 text-green-400 rounded-lg text-sm">
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">
-          {errorMessage}
-        </div>
-      )}
 
       <div className="space-y-6">
         <div>
@@ -254,15 +242,32 @@ const LocationHoursForm: React.FC = () => {
         </div>
       </div>
       
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+        {errorMessage && (
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-3.5 py-2 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
         <button
+          type="button"
           onClick={handleSave}
           disabled={updateLocation.isPending || (!currentLocation && !locationsData?.locations?.length)}
-          className="bg-[#E1017D] hover:bg-[#c0016a] disabled:bg-[#e1017d]/50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors cursor-pointer"
+          className="bg-[#E1017D] hover:bg-[#c0016a] disabled:bg-[#e1017d]/50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors cursor-pointer flex items-center gap-2"
         >
+          {updateLocation.isPending && (
+            <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+          )}
           {updateLocation.isPending ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
+
+      <SuccessModal
+        isOpen={showSuccessModal}
+        title="Location & Hours Saved!"
+        message="Location details and operating hours have been updated successfully."
+        buttonText="OK"
+        onConfirm={() => setShowSuccessModal(false)}
+      />
     </div>
   );
 };
