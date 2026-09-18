@@ -1,32 +1,32 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import HeroSectionForm from "@/components/ManageHome/HeroSectionForm";
 import BoomBundlesForm from "@/components/ManageHome/BoomBundlesForm";
 import LocationHoursForm from "@/components/ManageHome/LocationHoursForm";
 import ChooseGamesForm from "@/components/ManageHome/ChooseGamesForm";
 import BitesAndEventsForm from "@/components/ManageHome/BitesAndEventsForm";
 import NewsletterSectionForm from "@/components/ManageHome/NewsletterSectionForm";
-import CorporateHeroForm from "@/components/ManageCorporate/CorporateHeroForm";
-import CorporatePackagesForm from "@/components/ManageCorporate/CorporatePackagesForm";
-import CorporateBookOnlineForm from "@/components/ManageCorporate/CorporateBookOnlineForm";
-import CorporatePrivateHireForm from "@/components/ManageCorporate/CorporatePrivateHireForm";
-import CorporateOtherGamesForm from "@/components/ManageCorporate/CorporateOtherGamesForm";
-import {
-  DEFAULT_CORPORATES_DATA,
-  type CorporatesData,
-} from "@/hooks/useCorporate";
+
 import {
   useHomeQuery,
   useUpdateHomeMutation,
   type ChooseGameSectionData,
 } from "@/hooks/useHome";
 import { useLocationStore } from "@/store/locationStore";
+import SuccessModal from "@/components/common/SuccessModal";
 
-type Tab = "hero" | "bundles" | "location" | "games" | "bites" | "newsletter" | "corporates";
+type Tab = "hero" | "bundles" | "location" | "games" | "bites" | "newsletter";
 
 const ManageHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("hero");
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [savingSection, setSavingSection] = useState<string | null>(null);
+  const [errorSection, setErrorSection] = useState<{
+    section: string;
+    message: string;
+  } | null>(null);
+  const [successModalData, setSuccessModalData] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const { selectedLocation } = useLocationStore();
   const locationSlug = selectedLocation?.slug;
@@ -41,7 +41,6 @@ const ManageHome: React.FC = () => {
     { id: "games", label: "Choose Game" },
     { id: "bites", label: "Bites & Events" },
     { id: "newsletter", label: "Sign Up / Newsletter" },
-    { id: "corporates", label: "Corporates / Parties" },
   ];
 
   if (isLoading) {
@@ -130,8 +129,21 @@ const ManageHome: React.FC = () => {
     isActive: rawData?.newsletter?.isActive ?? true,
   };
 
+  const getErrorMessage = (err: unknown, fallback: string): string => {
+    if (err && typeof err === "object") {
+      const axiosErr = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      return axiosErr.response?.data?.message || axiosErr.message || fallback;
+    }
+    return fallback;
+  };
+
   // Save callback handlers
   const handleSaveHero = (heroFields: typeof heroData) => {
+    setErrorSection(null);
+    setSavingSection("hero");
     updateHomeMutation.mutate(
       {
         data: {
@@ -156,14 +168,29 @@ const ManageHome: React.FC = () => {
       },
       {
         onSuccess: () => {
-          setSuccessMsg("Hero Banner updated successfully");
-          setTimeout(() => setSuccessMsg(null), 3000);
+          setSavingSection(null);
+          setSuccessModalData({
+            title: "Hero Banner Saved!",
+            message: "Hero Banner has been updated successfully.",
+          });
+        },
+        onError: (err: unknown) => {
+          setSavingSection(null);
+          setErrorSection({
+            section: "hero",
+            message: getErrorMessage(
+              err,
+              "Failed to update Hero Banner. Please try again.",
+            ),
+          });
         },
       },
     );
   };
 
   const handleSaveBundles = (bundlesFields: typeof bundlesData) => {
+    setErrorSection(null);
+    setSavingSection("bundles");
     updateHomeMutation.mutate(
       {
         data: {
@@ -183,14 +210,29 @@ const ManageHome: React.FC = () => {
       },
       {
         onSuccess: () => {
-          setSuccessMsg("Boom Bundles updated successfully");
-          setTimeout(() => setSuccessMsg(null), 3000);
+          setSavingSection(null);
+          setSuccessModalData({
+            title: "Boom Bundles Saved!",
+            message: "Boom Bundles have been updated successfully.",
+          });
+        },
+        onError: (err: unknown) => {
+          setSavingSection(null);
+          setErrorSection({
+            section: "bundles",
+            message: getErrorMessage(
+              err,
+              "Failed to update Boom Bundles. Please try again.",
+            ),
+          });
         },
       },
     );
   };
 
   const handleSaveGames = (sectionData: ChooseGameSectionData) => {
+    setErrorSection(null);
+    setSavingSection("games");
     updateHomeMutation.mutate(
       {
         data: {
@@ -199,8 +241,21 @@ const ManageHome: React.FC = () => {
       },
       {
         onSuccess: () => {
-          setSuccessMsg("Choose Game section updated successfully");
-          setTimeout(() => setSuccessMsg(null), 3000);
+          setSavingSection(null);
+          setSuccessModalData({
+            title: "Choose Game Section Saved!",
+            message: "Choose Game section has been updated successfully.",
+          });
+        },
+        onError: (err: unknown) => {
+          setSavingSection(null);
+          setErrorSection({
+            section: "games",
+            message: getErrorMessage(
+              err,
+              "Failed to update Choose Game section. Please try again.",
+            ),
+          });
         },
       },
     );
@@ -210,6 +265,8 @@ const ManageHome: React.FC = () => {
     bitesFields: typeof bitesData,
     nightsOutFields: typeof nightsOutData,
   ) => {
+    setErrorSection(null);
+    setSavingSection("bites");
     updateHomeMutation.mutate(
       {
         data: {
@@ -240,14 +297,29 @@ const ManageHome: React.FC = () => {
       },
       {
         onSuccess: () => {
-          setSuccessMsg("Bites & Events section updated successfully");
-          setTimeout(() => setSuccessMsg(null), 3000);
+          setSavingSection(null);
+          setSuccessModalData({
+            title: "Bites & Events Saved!",
+            message: "Bites & Events section has been updated successfully.",
+          });
+        },
+        onError: (err: unknown) => {
+          setSavingSection(null);
+          setErrorSection({
+            section: "bites",
+            message: getErrorMessage(
+              err,
+              "Failed to update Bites & Events section. Please try again.",
+            ),
+          });
         },
       },
     );
   };
 
   const handleSaveNewsletter = (newsletterFields: typeof newsletterData) => {
+    setErrorSection(null);
+    setSavingSection("newsletter");
     updateHomeMutation.mutate(
       {
         data: {
@@ -268,29 +340,22 @@ const ManageHome: React.FC = () => {
       },
       {
         onSuccess: () => {
-          setSuccessMsg("Sign Up / Newsletter section updated successfully");
-          setTimeout(() => setSuccessMsg(null), 3000);
+          setSavingSection(null);
+          setSuccessModalData({
+            title: "Newsletter Section Saved!",
+            message:
+              "Sign Up / Newsletter section has been updated successfully.",
+          });
         },
-      },
-    );
-  };
-
-  const handleSaveCorporates = (partial: Partial<CorporatesData>, label: string) => {
-    const existingCorporates: CorporatesData = rawData?.corporates || DEFAULT_CORPORATES_DATA;
-    const mergedCorporates: CorporatesData = {
-      ...existingCorporates,
-      ...partial,
-    };
-    updateHomeMutation.mutate(
-      {
-        data: {
-          corporates: mergedCorporates,
-        },
-      },
-      {
-        onSuccess: () => {
-          setSuccessMsg(`${label} updated successfully`);
-          setTimeout(() => setSuccessMsg(null), 3000);
+        onError: (err: unknown) => {
+          setSavingSection(null);
+          setErrorSection({
+            section: "newsletter",
+            message: getErrorMessage(
+              err,
+              "Failed to update Newsletter section. Please try again.",
+            ),
+          });
         },
       },
     );
@@ -298,18 +363,11 @@ const ManageHome: React.FC = () => {
 
   return (
     <div className="p-6 text-white min-h-screen">
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Manage Home</h1>
-          <p className="text-gray-400">
-            Configure the content displayed on the homepage.
-          </p>
-        </div>
-        {successMsg && (
-          <div className="px-4 py-2 bg-green-500/10 border border-green-500/30 text-green-400 rounded-lg text-sm transition-all duration-300">
-            {successMsg}
-          </div>
-        )}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-white mb-2">Manage Home</h1>
+        <p className="text-gray-400">
+          Configure the content displayed on the homepage.
+        </p>
       </div>
 
       {/* Tabs */}
@@ -319,7 +377,7 @@ const ManageHome: React.FC = () => {
             key={tab.id}
             onClick={() => {
               setActiveTab(tab.id);
-              setSuccessMsg(null);
+              setErrorSection(null);
             }}
             className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
               activeTab === tab.id
@@ -338,14 +396,20 @@ const ManageHome: React.FC = () => {
           <HeroSectionForm
             initialData={heroData}
             onSave={handleSaveHero}
-            isSaving={updateHomeMutation.isPending}
+            isSaving={savingSection === "hero"}
+            errorMessage={
+              errorSection?.section === "hero" ? errorSection.message : null
+            }
           />
         )}
         {activeTab === "bundles" && (
           <BoomBundlesForm
             initialData={bundlesData}
             onSave={handleSaveBundles}
-            isSaving={updateHomeMutation.isPending}
+            isSaving={savingSection === "bundles"}
+            errorMessage={
+              errorSection?.section === "bundles" ? errorSection.message : null
+            }
           />
         )}
         {activeTab === "location" && <LocationHoursForm />}
@@ -353,7 +417,10 @@ const ManageHome: React.FC = () => {
           <ChooseGamesForm
             initialData={chooseGameSectionData}
             onSave={handleSaveGames}
-            isSaving={updateHomeMutation.isPending}
+            isSaving={savingSection === "games"}
+            errorMessage={
+              errorSection?.section === "games" ? errorSection.message : null
+            }
           />
         )}
         {activeTab === "bites" && (
@@ -361,97 +428,33 @@ const ManageHome: React.FC = () => {
             initialBites={bitesData}
             initialNightsOut={nightsOutData}
             onSave={handleSaveBitesEvents}
-            isSaving={updateHomeMutation.isPending}
+            isSaving={savingSection === "bites"}
+            errorMessage={
+              errorSection?.section === "bites" ? errorSection.message : null
+            }
           />
         )}
         {activeTab === "newsletter" && (
           <NewsletterSectionForm
             initialData={newsletterData}
             onSave={handleSaveNewsletter}
-            isSaving={updateHomeMutation.isPending}
+            isSaving={savingSection === "newsletter"}
+            errorMessage={
+              errorSection?.section === "newsletter"
+                ? errorSection.message
+                : null
+            }
           />
         )}
-        {activeTab === "corporates" && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#141414] border border-[#3A3530] p-4 rounded-xl">
-              <div>
-                <h3 className="font-semibold text-white">Corporate Page Details</h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Manage corporate hero, party packages, private hire, and featured games.
-                </p>
-              </div>
-              <Link
-                to="/manage-corporate"
-                className="inline-flex items-center gap-1.5 self-start sm:self-auto bg-[#2A2A2A] hover:bg-[#3A3530] text-[#E1017D] hover:text-white px-3.5 py-2 rounded-lg text-xs font-semibold border border-[#3A3530] transition-colors"
-              >
-                Dedicated Corporate View ↗
-              </Link>
-            </div>
-
-            <CorporateHeroForm
-              initialData={{
-                pageUrl: rawData?.corporates?.pageUrl ?? DEFAULT_CORPORATES_DATA.pageUrl ?? "",
-                heroTitle: rawData?.corporates?.heroTitle ?? DEFAULT_CORPORATES_DATA.heroTitle ?? "",
-                heroImageUrl: rawData?.corporates?.heroImageUrl ?? DEFAULT_CORPORATES_DATA.heroImageUrl ?? "",
-              }}
-              onSave={(fields) => handleSaveCorporates(fields, "Corporate Hero")}
-              isSaving={updateHomeMutation.isPending}
-            />
-
-            <CorporatePackagesForm
-              initialData={{
-                packagesTitle: rawData?.corporates?.packagesTitle ?? DEFAULT_CORPORATES_DATA.packagesTitle ?? "",
-                packagesDescription: rawData?.corporates?.packagesDescription ?? DEFAULT_CORPORATES_DATA.packagesDescription ?? "",
-                packages: rawData?.corporates?.packages ?? DEFAULT_CORPORATES_DATA.packages ?? [],
-                budgetText: rawData?.corporates?.budgetText ?? DEFAULT_CORPORATES_DATA.budgetText ?? "",
-              }}
-              onSave={(fields) => handleSaveCorporates(fields, "Corporate Packages")}
-              isSaving={updateHomeMutation.isPending}
-            />
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <CorporateBookOnlineForm
-                initialData={
-                  rawData?.corporates?.bookOnline ?? DEFAULT_CORPORATES_DATA.bookOnline ?? {
-                    title: "BOOK ONLINE",
-                    body: "",
-                    imageUrl: "",
-                    buttonText: "BOOK NOW",
-                    buttonLink: "",
-                  }
-                }
-                onSave={(fields) => handleSaveCorporates({ bookOnline: fields }, "Book Online")}
-                isSaving={updateHomeMutation.isPending}
-              />
-
-              <CorporatePrivateHireForm
-                initialData={
-                  rawData?.corporates?.privateHire ?? DEFAULT_CORPORATES_DATA.privateHire ?? {
-                    title: "PRIVATE HIRE",
-                    body: "",
-                    imageUrl: "",
-                    buttonText: "CONTACT US",
-                    buttonLink: "",
-                  }
-                }
-                onSave={(fields) => handleSaveCorporates({ privateHire: fields }, "Private Hire")}
-                isSaving={updateHomeMutation.isPending}
-              />
-            </div>
-
-            <CorporateOtherGamesForm
-              initialData={
-                rawData?.corporates?.otherGames ?? DEFAULT_CORPORATES_DATA.otherGames ?? {
-                  title: "OTHER GAMES",
-                  items: [],
-                }
-              }
-              onSave={(fields) => handleSaveCorporates({ otherGames: fields }, "Other Games")}
-              isSaving={updateHomeMutation.isPending}
-            />
-          </div>
-        )}
       </div>
+
+      <SuccessModal
+        isOpen={Boolean(successModalData)}
+        title={successModalData?.title}
+        message={successModalData?.message}
+        buttonText="OK"
+        onConfirm={() => setSuccessModalData(null)}
+      />
     </div>
   );
 };
