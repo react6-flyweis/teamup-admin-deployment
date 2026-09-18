@@ -7,6 +7,7 @@ import GameForm from './forms/GameForm';
 import { useHeaderCategoriesQuery, useMenuItemQuery } from '@/hooks/useHeaderCategories';
 import { createMenuItem, updateMenuItem } from '@/hooks/useHeaderSubItems';
 import { fetchGame } from '@/hooks/useGames';
+import SuccessModal from '@/components/common/SuccessModal';
 
 const GameFormPage: React.FC = () => {
   const { categoryId, subItemId } = useParams<{ categoryId: string; subItemId: string }>();
@@ -18,6 +19,8 @@ const GameFormPage: React.FC = () => {
 
   const [initialData, setInitialData] = useState<HeaderSubItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -58,34 +61,20 @@ const GameFormPage: React.FC = () => {
           name: apiItem.title || gameData?.name || gameData?.gameName || '',
           slug: apiItem.slug || gameData?.slug || '',
           path: apiItem.linkUrl || (gameData?.slug ? `/games/${gameData.slug}` : ''),
-          icon: apiItem.iconUrl || gameData?.gameIconUrl || '',
-          type: apiItem.type || 'game',
+          icon: apiItem.icon || apiItem.iconUrl || '',
           linkedItemId: linkedId,
-          linkedGame: gameData ? {
-            _id: String(gameData._id || gameData.id),
-            name: gameData.name || gameData.gameName || '',
-            slug: gameData.slug || '',
-            description: gameData.description || '',
-            imageUrl: gameData.imageUrl || gameData.cardImageUrl || gameData.bannerImageUrl || '',
-            duration: time,
-            priceFrom: typeof price === 'number' ? price : price ? parseFloat(price) : undefined,
-            tags: gameData.tags || [],
-            isActive: gameData.isActive,
-          } : undefined,
-          pageHeadline: gameData?.name || gameData?.gameName || gameData?.headline || apiItem.tagline || '',
-          pageTagline: apiItem.tagline || '',
-          cardDescription: gameData?.description || apiItem.taglineDescription || apiItem.description || '',
-          pageHeroImage: gameData?.bannerImageUrl || gameData?.cardImageUrl || gameData?.imageUrl || apiItem.heroImageUrl || apiItem.imageUrl || '',
+          pageHeadline: apiItem.title || gameData?.name || '',
+          pageTagline: detailsMap['Tagline'] || '',
+          cardDescription: apiItem.taglineDescription || gameData?.description || '',
+          pageHeroImage: gameData?.imageUrl || gameData?.cardImageUrl || gameData?.bannerImageUrl || '',
           heroBookNowLink: apiItem.bookingUrl || '',
-          isActive: apiItem.isActive !== undefined ? apiItem.isActive : (gameData?.isActive ?? true),
-          isHidden: apiItem.isActive !== undefined ? !apiItem.isActive : false,
           pageDetails: {
-            peoplePerMachine: people || detailsMap['How Many'] || '',
-            timeMin: time || detailsMap['Time'] || '',
-            lanes: lanes || detailsMap['How Many LANES'] || '',
-            price: (price != null ? String(price) : '') || detailsMap['Price'] || '',
-            minAge: gameData?.minimumAgeRequirement || detailsMap['Minimum Age'] || '',
-            wheelchairAccess: gameData?.wheelchairAccessible !== undefined ? gameData.wheelchairAccessible : (detailsMap['Wheelchair Access']?.toLowerCase() === 'yes'),
+            peoplePerMachine: people,
+            timeMin: time || '',
+            lanes: lanes,
+            price: price != null ? String(price) : '',
+            minAge: gameData?.minimumAgeRequirement || '',
+            wheelchairAccess: gameData?.wheelchairAccessible ?? false,
           },
         };
 
@@ -96,14 +85,20 @@ const GameFormPage: React.FC = () => {
         return;
       }
 
-      // 2. Fallback to categoriesData if API response is not available
-      const category = categoriesData?.categories?.find(c => c.id === categoryId);
-      if (subItemId && subItemId !== 'new') {
-        const subItem = category?.subItems?.find(s => s.id === subItemId);
-        if (subItem && isMounted) {
-          setInitialData(subItem);
+      // 2. Fallback to categories query if menuItemResponse didn't find it
+      if (subItemId && subItemId !== 'new' && categoriesData?.categories) {
+        for (const cat of categoriesData.categories) {
+          const item = cat.subItems.find(s => s.id === subItemId);
+          if (item) {
+            if (isMounted) {
+              setInitialData(item);
+              setLoading(false);
+            }
+            return;
+          }
         }
       }
+
       if (isMounted) {
         setLoading(false);
       }
@@ -117,7 +112,7 @@ const GameFormPage: React.FC = () => {
   }, [categoryId, subItemId, menuItemResponse, categoriesData, isMenuItemLoading]);
 
   const handleSave = async (subItemData: Partial<HeaderSubItem>) => {
-    setLoading(true);
+    setErrorMessage(null);
 
     try {
       if (subItemId && subItemId !== 'new') {
@@ -148,18 +143,28 @@ const GameFormPage: React.FC = () => {
           isActive: subItemData.isActive ?? true,
         });
       }
-    } catch (err) {
+
+      await queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      await queryClient.invalidateQueries({ queryKey: ['menu-item'] });
+
+      setShowSuccessModal(true);
+    } catch (err: unknown) {
       console.error('Error saving game menu item:', err);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiErr = err as any;
+      const msg = apiErr?.response?.data?.message || apiErr?.message || 'Failed to save game. Please check the fields and try again.';
+      setErrorMessage(msg);
+      throw err;
     }
+  };
 
-    await queryClient.invalidateQueries({ queryKey: ['header-categories'] });
-    await queryClient.invalidateQueries({ queryKey: ['menu-item'] });
-
-    navigate('/manage-header');
+  const handleSuccessRedirect = () => {
+    setShowSuccessModal(false);
+    navigate(categoryId ? `/manage-header?tab=${categoryId}` : '/manage-header');
   };
 
   const handleClose = () => {
-    navigate('/manage-header');
+    navigate(categoryId ? `/manage-header?tab=${categoryId}` : '/manage-header');
   };
 
   if (loading) {
@@ -184,9 +189,33 @@ const GameFormPage: React.FC = () => {
         </h1>
       </div>
 
+      {errorMessage && (
+        <div className="mb-6 p-4 bg-red-900/40 border border-red-500/60 rounded-xl text-red-200 text-sm flex items-center justify-between max-w-4xl mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-base">⚠️</span>
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            className="text-red-300 hover:text-white text-xs underline ml-4 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="bg-[#1C1C1C] rounded-xl border border-[#3A3530] w-full max-w-4xl overflow-hidden mx-auto">
         <GameForm initialData={initialData} subItemId={subItemId} onClose={handleClose} onSave={handleSave} />
       </div>
+
+      <SuccessModal
+        isOpen={showSuccessModal}
+        title={subItemId && subItemId !== 'new' ? 'Game Updated!' : 'Game Added!'}
+        message="Game details have been saved successfully."
+        buttonText="OK"
+        onConfirm={handleSuccessRedirect}
+      />
     </div>
   );
 };
