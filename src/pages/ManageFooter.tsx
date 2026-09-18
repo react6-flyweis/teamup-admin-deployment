@@ -47,6 +47,7 @@ const ManageFooter: React.FC = () => {
   }, [pagesData]);
 
   const [companyInfo, setCompanyInfo] = useState({
+    addressLabel: '',
     address: '',
     phone: '',
     copyright: '',
@@ -62,6 +63,7 @@ const ManageFooter: React.FC = () => {
     if (footerData?.content?.data) {
       const { companyInfo: apiCompanyInfo, socialMediaLinks: apiSocials } = footerData.content.data;
       setCompanyInfo({
+        addressLabel: apiCompanyInfo?.addressLabel || apiCompanyInfo?.addresslabel || '',
         address: apiCompanyInfo?.officeAddress || '',
         phone: apiCompanyInfo?.phoneNumber || '',
         copyright: apiCompanyInfo?.copyrightText || '',
@@ -81,6 +83,8 @@ const ManageFooter: React.FC = () => {
         section: 'footer',
         data: {
           companyInfo: {
+            addressLabel: companyInfo.addressLabel,
+            addresslabel: companyInfo.addressLabel,
             officeAddress: companyInfo.address,
             phoneNumber: companyInfo.phone,
             copyrightText: companyInfo.copyright,
@@ -119,7 +123,12 @@ const ManageFooter: React.FC = () => {
   };
 
   const handleSaveModal = async (label: string, url: string, content: string) => {
-    const slug = url.replace(/^\//, '');
+    const slug =
+      url.replace(/^\//, '') ||
+      label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
     const title = label;
     const excerpt = `${title} information for Team Up.`;
     const metaTitle = `${title} | Team Up`;
@@ -247,6 +256,16 @@ const ManageFooter: React.FC = () => {
           <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#3A3530]">
             <h2 className="text-xl font-semibold text-white mb-6">Company Information</h2>
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Office Address Label</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Office Address"
+                  value={companyInfo.addressLabel}
+                  onChange={(e) => setCompanyInfo({ ...companyInfo, addressLabel: e.target.value })}
+                  className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
+                />
+              </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Office Address</label>
                 <textarea
