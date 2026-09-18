@@ -174,7 +174,7 @@ export const initialMockData: HeaderCategory[] = [
         pageHeadline: 'KING NIGHTS',
         heroBookNowLink: '/book/king-nights',
         sectionHeadline: "RULE THE NIGHT LIKE A KING",
-        sectionDescription: "The ultimate lads\' night out — battle it out, claim your crown, and celebrate in style.",
+        sectionDescription: "The ultimate lads' night out — battle it out, claim your crown, and celebrate in style.",
         checklistItems: [
           { id: 'cl1', title: '2 X GAMES OF YOUR CHOICE', subtext: 'Compete in our most epic games' },
           { id: 'cl2', title: '2 X BEERS OR CIDERS PER PERSON', subtext: 'Fuel your competitive spirit' },
