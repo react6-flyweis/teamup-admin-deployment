@@ -7,9 +7,15 @@ interface BoomBundlesFormProps {
   initialData: BoomBundle[];
   onSave?: (data: BoomBundle[]) => void;
   isSaving?: boolean;
+  errorMessage?: string | null;
 }
 
-const BoomBundlesForm: React.FC<BoomBundlesFormProps> = ({ initialData, onSave, isSaving }) => {
+const BoomBundlesForm: React.FC<BoomBundlesFormProps> = ({
+  initialData,
+  onSave,
+  isSaving,
+  errorMessage,
+}) => {
   const [bundles, setBundles] = useState<BoomBundle[]>(initialData);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<BoomBundle | null>(null);
@@ -141,12 +147,21 @@ const BoomBundlesForm: React.FC<BoomBundlesFormProps> = ({ initialData, onSave, 
         ))}
       </div>
       
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+        {errorMessage && (
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-3.5 py-2 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
         <button 
+          type="button"
           onClick={() => onSave && onSave(bundles)}
           disabled={isSaving}
-          className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
         >
+          {isSaving && (
+            <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+          )}
           {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { EditIcon, TrashIcon } from '@/assets/icons';
 import FooterLinkModal from '@/components/ManageFooter/FooterLinkModal';
+import SuccessModal from '@/components/common/SuccessModal';
 import {
   useContentPagesQuery,
   useCreateContentPageMutation,
@@ -29,16 +30,8 @@ const ManageFooter: React.FC = () => {
   const updateFooterMutation = useUpdateFooterMutation(locationSlug);
 
   const [links, setLinks] = useState<FooterLink[]>([]);
-  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
-    if (feedback) {
-      const timer = setTimeout(() => {
-        setFeedback(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [feedback]);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [successModalData, setSuccessModalData] = useState<{ title: string; message: string } | null>(null);
 
   useEffect(() => {
     if (pagesData?.pages) {
@@ -54,6 +47,7 @@ const ManageFooter: React.FC = () => {
   }, [pagesData]);
 
   const [companyInfo, setCompanyInfo] = useState({
+    addressLabel: '',
     address: '',
     phone: '',
     copyright: '',
@@ -69,6 +63,7 @@ const ManageFooter: React.FC = () => {
     if (footerData?.content?.data) {
       const { companyInfo: apiCompanyInfo, socialMediaLinks: apiSocials } = footerData.content.data;
       setCompanyInfo({
+        addressLabel: apiCompanyInfo?.addressLabel || apiCompanyInfo?.addresslabel || '',
         address: apiCompanyInfo?.officeAddress || '',
         phone: apiCompanyInfo?.phoneNumber || '',
         copyright: apiCompanyInfo?.copyrightText || '',
@@ -82,11 +77,14 @@ const ManageFooter: React.FC = () => {
   }, [footerData]);
 
   const handleSaveFooterChanges = async () => {
+    setSaveError(null);
     try {
       await updateFooterMutation.mutateAsync({
         section: 'footer',
         data: {
           companyInfo: {
+            addressLabel: companyInfo.addressLabel,
+            addresslabel: companyInfo.addressLabel,
             officeAddress: companyInfo.address,
             phoneNumber: companyInfo.phone,
             copyrightText: companyInfo.copyright,
@@ -99,10 +97,14 @@ const ManageFooter: React.FC = () => {
         },
         isActive: true,
       });
-      setFeedback({ message: 'Footer changes saved successfully!', type: 'success' });
-    } catch (err) {
+      setSuccessModalData({
+        title: 'Footer Saved!',
+        message: 'Footer changes have been saved successfully.',
+      });
+    } catch (err: unknown) {
       console.error('Failed to save footer changes:', err);
-      setFeedback({ message: 'Failed to save footer changes.', type: 'error' });
+      const apiErr = err as { response?: { data?: { message?: string } }; message?: string };
+      setSaveError(apiErr?.response?.data?.message || apiErr?.message || 'Failed to save footer changes. Please try again.');
     }
   };
 
@@ -121,7 +123,12 @@ const ManageFooter: React.FC = () => {
   };
 
   const handleSaveModal = async (label: string, url: string, content: string) => {
-    const slug = url.replace(/^\//, '');
+    const slug =
+      url.replace(/^\//, '') ||
+      label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
     const title = label;
     const excerpt = `${title} information for Team Up.`;
     const metaTitle = `${title} | Team Up`;
@@ -135,7 +142,10 @@ const ManageFooter: React.FC = () => {
           slug: currentSlug,
           data: { title, slug, content, excerpt, metaTitle, metaDescription },
         });
-        setFeedback({ message: `Successfully updated page "${title}"!`, type: 'success' });
+        setSuccessModalData({
+          title: 'Page Updated!',
+          message: `Successfully updated page "${title}".`,
+        });
       } else {
         // Add new
         await createMutation.mutateAsync({
@@ -147,7 +157,10 @@ const ManageFooter: React.FC = () => {
           metaDescription,
           isActive: true,
         });
-        setFeedback({ message: `Successfully created page "${title}"!`, type: 'success' });
+        setSuccessModalData({
+          title: 'Page Created!',
+          message: `Successfully created page "${title}".`,
+        });
       }
       setIsModalOpen(false);
     } catch (err) {
@@ -188,22 +201,6 @@ const ManageFooter: React.FC = () => {
         <h1 className="text-2xl font-bold text-white mb-2">Manage Footer</h1>
         <p className="text-gray-400">Configure the content displayed in the website footer.</p>
       </div>
-
-      {feedback && (
-        <div className={`mb-6 p-4 rounded-lg border text-sm flex justify-between items-center ${
-          feedback.type === 'success' 
-            ? 'bg-green-500/10 border-green-500/20 text-green-400' 
-            : 'bg-red-500/10 border-red-500/20 text-red-400'
-        }`}>
-          <span>{feedback.message}</span>
-          <button 
-            onClick={() => setFeedback(null)} 
-            className="text-gray-400 hover:text-white ml-4 font-bold text-xs"
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column */}
@@ -259,6 +256,16 @@ const ManageFooter: React.FC = () => {
           <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#3A3530]">
             <h2 className="text-xl font-semibold text-white mb-6">Company Information</h2>
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Office Address Label</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Office Address"
+                  value={companyInfo.addressLabel}
+                  onChange={(e) => setCompanyInfo({ ...companyInfo, addressLabel: e.target.value })}
+                  className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
+                />
+              </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Office Address</label>
                 <textarea
@@ -324,12 +331,21 @@ const ManageFooter: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+        {saveError && (
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-4 py-2.5 rounded-lg">
+            {saveError}
+          </div>
+        )}
         <button
+          type="button"
           onClick={handleSaveFooterChanges}
           disabled={updateFooterMutation.isPending}
-          className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-8 py-3 rounded-lg font-medium transition-colors text-lg disabled:opacity-50"
+          className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-8 py-3 rounded-lg font-medium transition-colors text-lg disabled:opacity-50 flex items-center gap-2 cursor-pointer"
         >
+          {updateFooterMutation.isPending && (
+            <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
+          )}
           {updateFooterMutation.isPending ? 'Saving...' : 'Save All Footer Changes'}
         </button>
       </div>
@@ -344,6 +360,14 @@ const ManageFooter: React.FC = () => {
           onClose={() => setIsModalOpen(false)}
         />
       )}
+
+      <SuccessModal
+        isOpen={Boolean(successModalData)}
+        title={successModalData?.title}
+        message={successModalData?.message}
+        buttonText="OK"
+        onConfirm={() => setSuccessModalData(null)}
+      />
     </div>
   );
 };

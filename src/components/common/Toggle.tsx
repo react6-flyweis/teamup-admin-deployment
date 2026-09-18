@@ -7,6 +7,9 @@ interface ToggleProps {
   inactiveColor?: string;
   activeText?: string;
   inactiveText?: string;
+  loading?: boolean;
+  disabled?: boolean;
+  className?: string;
 }
 
 const Toggle: React.FC<ToggleProps> = ({
@@ -16,6 +19,9 @@ const Toggle: React.FC<ToggleProps> = ({
   inactiveColor = "#EC221F",
   activeText,
   inactiveText,
+  loading = false,
+  disabled = false,
+  className = "",
 }) => {
   const activeRef = useRef<HTMLSpanElement>(null);
   const inactiveRef = useRef<HTMLSpanElement>(null);
@@ -101,15 +107,24 @@ const Toggle: React.FC<ToggleProps> = ({
           {inactiveText}
         </span>
       </div>
-      <label className="inline-flex relative items-center cursor-pointer">
+      <label
+        className={`inline-flex relative items-center select-none ${
+          disabled ? "cursor-not-allowed opacity-60" : loading ? "cursor-wait" : "cursor-pointer"
+        } ${className}`}
+      >
         <input
           type="checkbox"
-          className="sr-only peer "
+          className="sr-only peer"
           checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
+          disabled={disabled || loading}
+          onChange={(e) => {
+            if (!disabled && !loading) {
+              onChange(e.target.checked);
+            }
+          }}
         />
         <div
-          className="relative overflow-hidden rounded-[24px]"
+          className="relative overflow-hidden rounded-3xl"
           style={{
             width: `${Math.max(currentContainerWidth, minWidth)}px`,
             height: `${containerHeight}px`,
@@ -118,7 +133,7 @@ const Toggle: React.FC<ToggleProps> = ({
           }}
         >
           <div
-            className="absolute bg-white rounded-[10px]"
+            className="absolute bg-white rounded-[10px] flex items-center justify-center shadow-sm"
             style={{
               width: `${knobSize}px`,
               height: `${knobSize}px`,
@@ -126,7 +141,17 @@ const Toggle: React.FC<ToggleProps> = ({
               top: `${knobTop}px`,
               transition: "left 0.5s",
             }}
-          />
+          >
+            {loading && (
+              <div
+                className="w-2.5 h-2.5 rounded-full animate-spin border-2 border-solid"
+                style={{
+                  borderColor: "rgba(0, 0, 0, 0.15)",
+                  borderTopColor: checked ? activeColor : inactiveColor,
+                }}
+              />
+            )}
+          </div>
           {activeHasText && (
             <span
               className="absolute text-sm font-medium text-white"

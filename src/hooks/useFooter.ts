@@ -3,6 +3,8 @@ import apiClient from '@/utils/apiClient';
 
 export interface FooterData {
   companyInfo: {
+    addressLabel?: string;
+    addresslabel?: string;
     officeAddress: string;
     phoneNumber: string;
     copyrightText: string;

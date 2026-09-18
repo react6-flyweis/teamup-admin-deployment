@@ -14,6 +14,7 @@ interface ImageInputWithUploadProps {
   className?: string;
   inputClassName?: string;
   labelClassName?: string;
+  buttonClassName?: string;
   showPreview?: boolean;
   previewHeight?: string;
   previewWidth?: string;
@@ -65,6 +66,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   className = '',
   inputClassName = '',
   labelClassName = '',
+  buttonClassName = '',
   showPreview = true,
   previewHeight = 'h-20',
   previewWidth = 'w-32',
@@ -178,7 +180,10 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
           type="button"
           disabled={isUploading}
           onClick={() => fileInputRef.current?.click()}
-          className="bg-[#2A2A2A] hover:bg-[#3A3530] text-white px-3 py-1.5 rounded text-xs border border-[#3A3530] shrink-0 disabled:opacity-50 flex items-center gap-1.5 transition-colors cursor-pointer"
+          className={
+            buttonClassName ||
+            "bg-[#2A2A2A] hover:bg-[#3A3530] text-white px-3 py-1.5 rounded text-xs border border-[#3A3530] shrink-0 disabled:opacity-50 flex items-center gap-1.5 transition-colors cursor-pointer"
+          }
         >
           {isUploading ? (
             <span className="animate-pulse">Uploading...</span>
@@ -210,6 +215,18 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
               </svg>
               <span className="text-[11px]">Preview unavailable</span>
             </div>
+          ) : previewSrc.match(/\.(mp4|webm|ogg|mov)$/i) || previewSrc.includes('video') ? (
+            <video
+              key={previewSrc}
+              src={previewSrc}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className={`w-full h-full ${fit === 'contain' ? 'object-contain p-1.5' : 'object-cover'}`}
+              onLoadedData={() => setHasLoadError(false)}
+              onError={() => setHasLoadError(true)}
+            />
           ) : (
             <img
               key={previewSrc}

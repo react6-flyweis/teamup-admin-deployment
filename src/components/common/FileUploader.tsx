@@ -8,6 +8,7 @@ interface FileUploaderProps {
   accept?: string;
   className?: string;
   aspectRatio?: string;
+  helperText?: string;
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({
@@ -16,6 +17,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   accept = 'image/*,video/*',
   className = '',
   aspectRatio,
+  helperText,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -53,7 +55,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       <div 
         onClick={!value && !isUploading ? triggerFileInput : undefined}
         style={aspectRatio ? { aspectRatio: aspectRatio.replace(':', ' / ') } : undefined}
-        className={`relative w-full ${aspectRatio ? 'max-w-xl h-auto' : 'h-[200px]'} rounded-lg border-2 border-dashed border-gray-500 flex flex-col items-center justify-center overflow-hidden ${!value && !isUploading ? 'cursor-pointer hover:border-[#E1017D] transition-colors' : ''}`}
+        className={`relative w-full ${aspectRatio ? 'max-w-xl h-auto' : 'h-50'} rounded-lg border-2 border-dashed border-gray-500 flex flex-col items-center justify-center overflow-hidden ${!value && !isUploading ? 'cursor-pointer hover:border-[#E1017D] transition-colors' : ''}`}
       >
         <input 
           type="file" 
@@ -87,7 +89,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         ) : (
           <div className="text-center">
             <UploadIcon size={32} className="mx-auto mb-2 text-gray-400" />
-            <p className="text-gray-400 text-sm">Click to upload image or video</p>
+            <p className="text-gray-400 text-sm">{helperText || 'Click to upload image or video'}</p>
             <p className="text-gray-500 text-xs mt-1">Or enter URL below</p>
           </div>
         )}

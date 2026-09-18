@@ -14,6 +14,7 @@ import {
   extractId,
   type QueensNightPayload,
 } from '@/hooks/useHeaderSubItems';
+import SuccessModal from '@/components/common/SuccessModal';
 
 const QueensNightFormPage: React.FC = () => {
   const { categoryId, subItemId } = useParams<{ categoryId: string; subItemId: string }>();
@@ -25,6 +26,9 @@ const QueensNightFormPage: React.FC = () => {
 
   const [initialData, setInitialData] = useState<HeaderSubItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -35,6 +39,7 @@ const QueensNightFormPage: React.FC = () => {
       if (subItemId && subItemId !== 'new') {
         const menuItem = menuItemResponse?.menuItem;
         const linkedId = menuItem?.linkedItemId || subItemId;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let realData: any = null;
 
         if (linkedId) {
@@ -88,11 +93,15 @@ const QueensNightFormPage: React.FC = () => {
     };
 
     loadData();
-    return () => { isMounted = false; };
-  }, [subItemId, categoryId, menuItemResponse, isMenuItemLoading, categoriesData]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [categoryId, subItemId, menuItemResponse, isMenuItemLoading, categoriesData]);
 
   const handleSave = async (subItemData: Partial<HeaderSubItem>) => {
-    setLoading(true);
+    setIsSaving(true);
+    setErrorMessage(null);
 
     const pagePayload: QueensNightPayload = {
       name: subItemData.name || '',
@@ -154,18 +163,32 @@ const QueensNightFormPage: React.FC = () => {
           isActive: subItemData.isActive ?? true,
         });
       }
-    } catch (error) {
+
+      await queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      await queryClient.invalidateQueries({ queryKey: ['menu-item'] });
+
+      setShowSuccessModal(true);
+    } catch (error: unknown) {
       console.error('Error saving Queens Night API:', error);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiErr = error as any;
+      const msg =
+        apiErr?.response?.data?.message ||
+        apiErr?.message ||
+        'Failed to save queens night. Please check the fields and try again.';
+      setErrorMessage(msg);
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    await queryClient.invalidateQueries({ queryKey: ['header-categories'] });
-    await queryClient.invalidateQueries({ queryKey: ['menu-item'] });
-
-    navigate('/manage-header');
+  const handleSuccessRedirect = () => {
+    setShowSuccessModal(false);
+    navigate(categoryId ? `/manage-header?tab=${categoryId}` : '/manage-header');
   };
 
   const handleClose = () => {
-    navigate('/manage-header');
+    navigate(categoryId ? `/manage-header?tab=${categoryId}` : '/manage-header');
   };
 
   if (loading) {
@@ -190,9 +213,38 @@ const QueensNightFormPage: React.FC = () => {
         </h1>
       </div>
 
+      {errorMessage && (
+        <div className="mb-6 p-4 bg-red-900/40 border border-red-500/60 rounded-xl text-red-200 text-sm flex items-center justify-between max-w-4xl mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-base">⚠️</span>
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            className="text-red-300 hover:text-white text-xs underline ml-4 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="bg-[#1C1C1C] rounded-xl border border-[#3A3530] w-full max-w-4xl overflow-hidden mx-auto">
-        <QueensNightForm initialData={initialData} onClose={handleClose} onSave={handleSave} />
+        <QueensNightForm
+          initialData={initialData}
+          onClose={handleClose}
+          onSave={handleSave}
+          isSaving={isSaving}
+        />
       </div>
+
+      <SuccessModal
+        isOpen={showSuccessModal}
+        title={subItemId && subItemId !== 'new' ? 'Queens Night Updated!' : 'Queens Night Created!'}
+        message="Queens Night details have been saved successfully."
+        buttonText="OK"
+        onConfirm={handleSuccessRedirect}
+      />
     </div>
   );
 };

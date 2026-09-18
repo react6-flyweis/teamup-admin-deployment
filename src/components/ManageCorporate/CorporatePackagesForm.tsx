@@ -17,12 +17,14 @@ interface CorporatePackagesFormProps {
     budgetText: string;
   }) => void;
   isSaving?: boolean;
+  errorMessage?: string | null;
 }
 
 const CorporatePackagesForm: React.FC<CorporatePackagesFormProps> = ({
   initialData,
   onSave,
   isSaving = false,
+  errorMessage,
 }) => {
   const [packagesTitle, setPackagesTitle] = useState(initialData.packagesTitle);
   const [packagesDescription, setPackagesDescription] = useState(initialData.packagesDescription);
@@ -249,16 +251,21 @@ const CorporatePackagesForm: React.FC<CorporatePackagesFormProps> = ({
         </div>
       </div>
 
-      <div className="mt-8 pt-6 border-t border-[#3A3530] flex justify-end">
+      <div className="mt-8 pt-6 border-t border-[#3A3530] flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+        {errorMessage && (
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-3.5 py-2 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
         <button
           type="submit"
           disabled={isSaving}
-          className="bg-[#E1017D] hover:bg-[#c2016c] text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+          className="bg-[#E1017D] hover:bg-[#c2016c] text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
         >
           {isSaving && (
             <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
           )}
-          Save Corporate Packages
+          {isSaving ? 'Saving...' : 'Save Corporate Packages'}
         </button>
       </div>
 

@@ -7,9 +7,15 @@ interface ChooseGamesFormProps {
   initialData?: ChooseGameSectionData;
   onSave?: (data: ChooseGameSectionData) => void;
   isSaving?: boolean;
+  errorMessage?: string | null;
 }
 
-const ChooseGamesForm: React.FC<ChooseGamesFormProps> = ({ initialData, onSave, isSaving }) => {
+const ChooseGamesForm: React.FC<ChooseGamesFormProps> = ({
+  initialData,
+  onSave,
+  isSaving,
+  errorMessage,
+}) => {
   const { data: homeQueryData, isLoading: isQueryLoading, error: queryError } = useHomeQuery();
   const updateHomeMutation = useUpdateHomeMutation();
 
@@ -253,13 +259,21 @@ const ChooseGamesForm: React.FC<ChooseGamesFormProps> = ({ initialData, onSave, 
       )}
 
       {/* Save Button */}
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+        {errorMessage && (
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-3.5 py-2 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
         <button
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
         >
+          {saving && (
+            <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+          )}
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
