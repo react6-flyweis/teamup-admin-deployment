@@ -5,7 +5,7 @@ import { useLocationsQuery } from '@/hooks/useLocations';
 import { EditIcon, TrashIcon } from '@/assets/icons';
 import SubItemList from '@/components/ManageHeader/SubItemList';
 import AddLocationModal from '@/components/ManageHeader/AddLocationModal';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Toggle from '@/components/common/Toggle';
 import TeamUpLogo from '@/assets/TeamUp.png';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
@@ -22,22 +22,62 @@ const ManageHeader: React.FC = () => {
   const [locations, setLocations] = useState<string[]>(['🇺🇸 Folsom, CA']);
   const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [updatingCategoryIds, setUpdatingCategoryIds] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
 
   useEffect(() => {
     if (categoriesData?.categories) {
-      setCategories(categoriesData.categories);
-      setSelectedCategoryId((prev) => {
-        if (!prev && categoriesData.categories.length > 0) {
-          return categoriesData.categories[0].id;
-        }
-        if (prev && !categoriesData.categories.some((c) => c.id === prev)) {
-          return categoriesData.categories[0]?.id || null;
-        }
-        return prev;
+      const rawCats = Array.isArray(categoriesData.categories) ? categoriesData.categories : [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cats: HeaderCategory[] = rawCats.map((cat: any) => {
+        const isCatActive = cat.isActive !== undefined ? Boolean(cat.isActive) : !cat.isHidden;
+        return {
+          ...cat,
+          id: cat.id || cat._id,
+          name: cat.name,
+          isActive: isCatActive,
+          isHidden: !isCatActive,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          subItems: (cat.subItems || cat.items || []).map((sub: any) => {
+            const isSubActive = sub.isActive !== undefined ? Boolean(sub.isActive) : !sub.isHidden;
+            return {
+              ...sub,
+              id: sub.id || sub._id,
+              name: sub.name,
+              isActive: isSubActive,
+              isHidden: !isSubActive,
+            };
+          }),
+        };
       });
+      setCategories(cats);
+
+      if (cats.length > 0) {
+        const matched = tabParam
+          ? cats.find(c => c.id === tabParam || c.name.toLowerCase().replace(/\s+/g, '-') === tabParam.toLowerCase())
+          : null;
+
+        if (matched) {
+          setSelectedCategoryId(matched.id);
+          if (tabParam !== matched.id) {
+            setSearchParams({ tab: matched.id }, { replace: true });
+          }
+        } else {
+          setSelectedCategoryId(cats[0].id);
+          setSearchParams({ tab: cats[0].id }, { replace: true });
+        }
+      } else {
+        setSelectedCategoryId(null);
+      }
     }
-  }, [categoriesData]);
+  }, [categoriesData, tabParam, setSearchParams]);
+
+  const handleSelectCategory = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    setSearchParams({ tab: categoryId });
+  };
 
   useEffect(() => {
     if (locationsData?.locations) {
@@ -57,27 +97,37 @@ const ManageHeader: React.FC = () => {
     setCategories(newCategories);
   };
 
-  const toggleVisibility = (id: string) => {
+  const toggleVisibility = async (id: string) => {
     const category = categories.find(cat => cat.id === id);
-    if (!category) return;
+    if (!category || updatingCategoryIds[id]) return;
     const previousCategories = [...categories];
-    const newIsActive = !!category.isHidden;
+    const isCurrentlyActive = category.isActive !== undefined ? category.isActive : !category.isHidden;
+    const newIsActive = !isCurrentlyActive;
 
     // Optimistically update local UI state
-    saveCategories(categories.map(cat => cat.id === id ? { ...cat, isHidden: !cat.isHidden } : cat));
+    saveCategories(categories.map(cat => cat.id === id ? { ...cat, isActive: newIsActive, isHidden: !newIsActive } : cat));
+    setUpdatingCategoryIds(prev => ({ ...prev, [id]: true }));
+    setErrorMessage(null);
 
-    // Send PATCH /api/menu-items/categories/:categoryId with rollback on error
-    updateCategory.mutate(
-      { categoryId: id, isActive: newIsActive },
-      {
-        onError: (err) => {
-          console.error('Error updating category visibility:', err);
-          saveCategories(previousCategories);
-          setErrorMessage('Failed to update category status. Changes have been reverted.');
-          queryClient.invalidateQueries({ queryKey: ['header-categories'] });
-        },
-      }
-    );
+    try {
+      await updateCategory.mutateAsync({
+        categoryId: id,
+        name: category.name,
+        isActive: newIsActive,
+        isHidden: !newIsActive,
+      });
+    } catch (err) {
+      console.error('Error updating category visibility:', err);
+      saveCategories(previousCategories);
+      setErrorMessage('Failed to update category status. Changes have been reverted.');
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+    } finally {
+      setUpdatingCategoryIds(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   };
 
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
@@ -95,7 +145,13 @@ const ManageHeader: React.FC = () => {
     const updated = categories.filter(cat => cat.id !== id);
     saveCategories(updated);
     if (selectedCategoryId === id) {
-      setSelectedCategoryId(updated.length > 0 ? updated[0].id : null);
+      const nextId = updated.length > 0 ? updated[0].id : null;
+      setSelectedCategoryId(nextId);
+      if (nextId) {
+        setSearchParams({ tab: nextId }, { replace: true });
+      } else {
+        setSearchParams({}, { replace: true });
+      }
     }
 
     try {
@@ -105,6 +161,9 @@ const ManageHeader: React.FC = () => {
       // Rollback optimistic update on failure
       saveCategories(previousCategories);
       setSelectedCategoryId(previousSelectedId);
+      if (previousSelectedId) {
+        setSearchParams({ tab: previousSelectedId }, { replace: true });
+      }
       setErrorMessage('Failed to delete category. The item has been restored.');
       queryClient.invalidateQueries({ queryKey: ['header-categories'] });
     } finally {
@@ -229,7 +288,7 @@ const ManageHeader: React.FC = () => {
             <div className="p-4 border-b border-[#3A3530] flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Categories</span>
               <button
-                onClick={() => navigate('/manage-header/category/new')}
+                onClick={() => navigate(`/manage-header/category/new${selectedCategoryId ? `?tab=${selectedCategoryId}` : ''}`)}
                 className="text-xs bg-[#D92D20] hover:bg-red-700 text-white px-2 py-1 rounded transition-colors font-medium"
               >
                 + Add
@@ -240,7 +299,7 @@ const ManageHeader: React.FC = () => {
               {categories.map((category) => (
                 <div
                   key={category.id}
-                  onClick={() => setSelectedCategoryId(category.id)}
+                  onClick={() => handleSelectCategory(category.id)}
                   className={`group flex items-center justify-between px-4 py-3 cursor-pointer border-b border-[#2A2A2A] transition-all duration-200 ${selectedCategoryId === category.id
                       ? 'bg-[#2C2C2C] border-l-2 border-l-[#E1017D]'
                       : 'hover:bg-[#252525] border-l-2 border-l-transparent'
@@ -262,14 +321,16 @@ const ManageHeader: React.FC = () => {
                   >
                     <div title={category.isHidden ? 'Show' : 'Hide'}>
                       <Toggle
-                        checked={!category.isHidden}
+                        checked={category.isActive !== undefined ? category.isActive : !category.isHidden}
                         onChange={() => toggleVisibility(category.id)}
+                        loading={!!updatingCategoryIds[category.id]}
+                        disabled={!!updatingCategoryIds[category.id]}
                         activeColor="#10A200"
                         inactiveColor="#EC221F"
                       />
                     </div>
                     <button
-                      onClick={() => navigate(`/manage-header/category/${category.id}`)}
+                      onClick={() => navigate(`/manage-header/category/${category.id}?tab=${category.id}`)}
                       className="text-blue-400 hover:text-blue-300 p-1 transition-colors"
                     >
                       <EditIcon size={14} color="currentColor" />
