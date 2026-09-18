@@ -13,6 +13,7 @@ export interface ButtonData {
 
 export interface HeroData {
   backgroundMediaUrl: string;
+  videoUrl?: string;
   title: string;
   subtitle: string;
   primaryButton: ButtonData;
@@ -147,6 +148,7 @@ export interface HomeData {
   newsletter?: NewsletterSectionData;
   signUp?: NewsletterSectionData;
   corporates?: CorporatesData;
+  mainBg?: string;
 }
 
 export interface HomeContent {
