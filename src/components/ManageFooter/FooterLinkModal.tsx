@@ -72,11 +72,6 @@ const FooterLinkModal: React.FC<FooterLinkModalProps> = ({
         </div>
 
         <div className="p-6 overflow-y-auto flex-1">
-          {errorMsg && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-sm">
-              {errorMsg}
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
@@ -119,28 +114,37 @@ const FooterLinkModal: React.FC<FooterLinkModalProps> = ({
           </div>
         </div>
 
-        <div className="p-6 border-t border-[#3A3530] flex justify-end gap-4 bg-[#1C1C1C] rounded-b-2xl">
-          <button
-            onClick={onClose}
-            disabled={isSaving}
-            className="px-6 py-2 rounded-lg font-medium text-white border border-gray-600 hover:bg-gray-800 transition-colors disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            {isSaving ? (
-              <>
-                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                Saving...
-              </>
-            ) : (
-              'Save Content'
-            )}
-          </button>
+        <div className="p-6 border-t border-[#3A3530] flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4 bg-[#1C1C1C] rounded-b-2xl">
+          {errorMsg ? (
+            <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-3.5 py-2 rounded-lg">
+              {errorMsg}
+            </div>
+          ) : (
+            <div />
+          )}
+          <div className="flex gap-4">
+            <button
+              onClick={onClose}
+              disabled={isSaving}
+              className="px-6 py-2 rounded-lg font-medium text-white border border-gray-600 hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+            >
+              {isSaving ? (
+                <>
+                  <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+                  Saving...
+                </>
+              ) : (
+                'Save Content'
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
