@@ -9,7 +9,7 @@ import { uploadFile } from '@/utils/fileUpload';
 
 interface GameFormProps {
   onClose: () => void;
-  onSave: (subItem: Partial<HeaderSubItem>) => void;
+  onSave: (subItem: Partial<HeaderSubItem>) => void | Promise<void>;
   initialData: HeaderSubItem | null;
   subItemId?: string;
 }
@@ -298,7 +298,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
       queryClient.invalidateQueries({ queryKey: ['menu-item'] });
       queryClient.invalidateQueries({ queryKey: ['games'] });
 
-      onSave({
+      await onSave({
         name: name.trim(),
         path: path.trim(),
         slug: path.trim().replace(/^\//, ''),
