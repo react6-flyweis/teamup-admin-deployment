@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { uploadFile } from '@/utils/fileUpload';
 import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
-import type { HeaderSubItem, FeaturedEventCard, ChecklistItem, StatBlock } from './types';
+import type { HeaderSubItem, FeaturedEventCard, ChecklistItem, StatBlock } from '@/components/ManageHeader/types';
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 
 interface QueensNightFormProps {
-    onClose: () => void;
+  onClose: () => void;
   initialData?: HeaderSubItem | null;
-  onSave: (data: HeaderSubItem) => void;
+  onSave: (data: HeaderSubItem) => void | Promise<void>;
+  isSaving?: boolean;
 }
 
-const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData, onSave }) => {
+const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData, onSave, isSaving = false }) => {
   // Navigation & Identifiers
   const [name, setName] = useState('');
   const [path, setPath] = useState('');
@@ -20,7 +21,6 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
   const [pageHeadline, setPageHeadline] = useState('');
   const [pageHeroImage, setPageHeroImage] = useState('');
   const [heroBookNowLink, setHeroBookNowLink] = useState('');
-  const heroImageRef = useRef<HTMLInputElement>(null);
 
   // What's Included (Checklist)
   const [sectionHeadline, setSectionHeadline] = useState('');
@@ -199,34 +199,28 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
                 <span className="text-[#E1017D]">02</span> Hero Section
               </h3>
               <div className="space-y-4 bg-[#252525] p-4 rounded-lg border border-[#3A3530]">
-                <div>
-                  <label className={labelCls}>Main Headline</label>
-                  <input type="text" value={pageHeadline} onChange={e => setPageHeadline(e.target.value)} placeholder="e.g. QUEENS NIGHT" required className={inputCls} />
-                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>
-                      Hero Image URL <span className="text-xs text-gray-400 font-normal ml-1.5">(16:9 to 21:9 • Rec: 1905×805 or 1920×1080 px)</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <input type="text" value={pageHeroImage} onChange={e => setPageHeroImage(e.target.value)} placeholder="Paste image URL here" className={inputCls} />
-                      <button type="button" onClick={() => heroImageRef.current?.click()} className="px-4 bg-[#3A3530] text-white rounded-lg hover:bg-[#4A4540] transition-colors">
-                        <UploadIcon />
-                      </button>
-                      <input type="file" ref={heroImageRef} className="hidden" accept="image/*" onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => setPageHeroImage(reader.result as string);
-                          reader.readAsDataURL(file);
-                        }
-                      }} />
-                    </div>
+                    <label className={labelCls}>Main Headline</label>
+                    <input type="text" value={pageHeadline} onChange={e => setPageHeadline(e.target.value)} placeholder="e.g. QUEENS NIGHT" required className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>Hero 'Book Now' Link</label>
                     <input type="text" value={heroBookNowLink} onChange={e => setHeroBookNowLink(e.target.value)} placeholder="e.g. /book/queens-night" className={inputCls} />
                   </div>
+                </div>
+                <div>
+                  <ImageInputWithUpload
+                    label="Hero Image URL"
+                    hint="16:9 to 21:9 • Rec: 1905×805 or 1920×1080 px"
+                    value={pageHeroImage}
+                    onChange={setPageHeroImage}
+                    placeholder="Paste image URL or click upload"
+                    inputClassName={inputCls}
+                    labelClassName={labelCls}
+                    previewWidth="w-full"
+                    previewHeight="h-36"
+                  />
                 </div>
               </div>
             </section>
@@ -410,8 +404,14 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
           <button type="button" onClick={onClose} className="px-6 py-2.5 text-sm font-medium text-gray-300 hover:text-white transition-colors">
             Cancel
           </button>
-          <button type="submit" form="queens-night-form" className="px-6 py-2.5 bg-[#E1017D] text-white text-sm font-medium rounded-lg hover:bg-[#C0006A] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#E1017D]/20">
-            Save Changes
+          <button
+            type="submit"
+            form="queens-night-form"
+            disabled={isSaving}
+            className="px-6 py-2.5 bg-[#E1017D] text-white text-sm font-medium rounded-lg hover:bg-[#C0006A] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#E1017D]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSaving && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
