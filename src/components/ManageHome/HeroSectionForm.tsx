@@ -10,9 +10,15 @@ interface HeroSectionFormProps {
   initialData: HeroSection;
   onSave?: (data: HeroSection) => void;
   isSaving?: boolean;
+  errorMessage?: string | null;
 }
 
-const HeroSectionForm: React.FC<HeroSectionFormProps> = ({ initialData, onSave, isSaving }) => {
+const HeroSectionForm: React.FC<HeroSectionFormProps> = ({
+  initialData,
+  onSave,
+  isSaving,
+  errorMessage,
+}) => {
   const [data, setData] = useState<HeroSection>(initialData);
   const [showPreview, setShowPreview] = useState(false);
   const { data: categoriesData } = useHeaderCategoriesQuery();
@@ -261,20 +267,32 @@ const HeroSectionForm: React.FC<HeroSectionFormProps> = ({ initialData, onSave, 
         </div>
       </div>
 
-      <div className="mt-8 flex justify-end gap-4">
-        <button
-          onClick={() => setShowPreview(!showPreview)}
-          className="bg-[#2A2A2A] hover:bg-[#3A3530] text-white px-6 py-2 rounded-lg font-medium transition-colors border border-[#3A3530]"
-        >
-          {showPreview ? 'Hide Preview' : 'Preview Live'}
-        </button>
-        <button
-          onClick={() => onSave && onSave(data)}
-          disabled={isSaving}
-          className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSaving ? 'Saving...' : 'Save Changes'}
-        </button>
+      <div className="mt-8 flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+        {errorMessage && (
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-3.5 py-2 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+        <div className="flex gap-4">
+          <button
+            type="button"
+            onClick={() => setShowPreview(!showPreview)}
+            className="bg-[#2A2A2A] hover:bg-[#3A3530] text-white px-6 py-2 rounded-lg font-medium transition-colors border border-[#3A3530] cursor-pointer"
+          >
+            {showPreview ? 'Hide Preview' : 'Preview Live'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave && onSave(data)}
+            disabled={isSaving}
+            className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+          >
+            {isSaving && (
+              <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+            )}
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
     </div>
   );
