@@ -91,11 +91,12 @@ export interface NewsletterSectionData {
 
 export interface CorporatePackageItem {
   title: string;
+  games: string;
+  welcomeBevvy: string;
+  bevvies: string;
+  scran: string;
+  somethingFun: string;
   price: string;
-  iconUrl: string;
-  details: string[];
-  buttonText: string;
-  buttonLink: string;
 }
 
 export interface CorporateBookOnlineData {
