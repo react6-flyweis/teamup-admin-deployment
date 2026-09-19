@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { CorporatePackageItem } from './types';
-import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
-import { CloseIcon, TrashIcon } from '@/assets/icons';
+import { CloseIcon } from '@/assets/icons';
 
 interface PackageEditModalProps {
   isOpen: boolean;
@@ -12,11 +11,12 @@ interface PackageEditModalProps {
 
 const defaultPackage: CorporatePackageItem = {
   title: '',
+  games: '',
+  welcomeBevvy: '',
+  bevvies: '',
+  scran: '',
+  somethingFun: '',
   price: '',
-  iconUrl: '',
-  details: [''],
-  buttonText: 'BOOK NOW',
-  buttonLink: '',
 };
 
 const PackageEditModal: React.FC<PackageEditModalProps> = ({
@@ -26,56 +26,29 @@ const PackageEditModal: React.FC<PackageEditModalProps> = ({
   initialData,
 }) => {
   const [formData, setFormData] = useState<CorporatePackageItem>(defaultPackage);
-  const [detailInput, setDetailInput] = useState('');
 
   useEffect(() => {
     if (initialData) {
       setFormData({
-        ...initialData,
-        details: initialData.details && initialData.details.length > 0 ? initialData.details : [''],
+        title: initialData.title || '',
+        games: initialData.games || '',
+        welcomeBevvy: initialData.welcomeBevvy || '',
+        bevvies: initialData.bevvies || '',
+        scran: initialData.scran || '',
+        somethingFun: initialData.somethingFun || '',
+        price: initialData.price || '',
       });
     } else {
       setFormData(defaultPackage);
     }
-    setDetailInput('');
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleAddDetail = () => {
-    if (!detailInput.trim()) return;
-    setFormData({
-      ...formData,
-      details: [...formData.details.filter(d => d.trim().length > 0), detailInput.trim()],
-    });
-    setDetailInput('');
-  };
-
-  const handleRemoveDetail = (index: number) => {
-    const updated = formData.details.filter((_, i) => i !== index);
-    setFormData({
-      ...formData,
-      details: updated.length > 0 ? updated : [''],
-    });
-  };
-
-  const handleDetailChange = (index: number, val: string) => {
-    const updated = [...formData.details];
-    updated[index] = val;
-    setFormData({ ...formData, details: updated });
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const cleanDetails = formData.details
-      .map((d) => d.trim())
-      .filter((d) => d.length > 0);
-
-    onSave({
-      ...formData,
-      details: cleanDetails,
-    });
+    onSave(formData);
     onClose();
   };
 
@@ -100,129 +73,102 @@ const PackageEditModal: React.FC<PackageEditModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Package Title <span className="text-red-500">*</span>
+                Package Title / Column Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g. PINTS & PAYOFFS"
+                placeholder="e.g. JINGLE & MINGLE or BUILD YOUR OWN"
                 className="w-full bg-[#121212] border border-[#3A3530] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#E1017D] transition-colors text-sm"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Price Tag <span className="text-red-500">*</span>
+                Price (£ PP / Per Person) <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                placeholder="e.g. $45 or $72.50"
+                placeholder="e.g. £35 PP or BUILT AROUND YOUR BUDGET"
                 className="w-full bg-[#121212] border border-[#3A3530] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#E1017D] transition-colors text-sm"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Icon / Badge Image
-            </label>
-            <ImageInputWithUpload
-              value={formData.iconUrl}
-              onChange={(url) => setFormData({ ...formData, iconUrl: url })}
-              label=""
-              hint="Square icon or badge image (1:1)"
-              placeholder="Paste icon URL or upload package icon"
-              previewHeight="h-20"
-              previewWidth="w-20"
-            />
-          </div>
+          {/* Structured Matrix Rows */}
+          <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-4 space-y-4">
+            <h4 className="text-xs font-bold text-[#E1017D] tracking-wider uppercase">
+              Package Inclusions (Matrix Rows)
+            </h4>
 
-          {/* Package Details / Inclusions */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Included Features & Details
-            </label>
-            <p className="text-xs text-gray-500 mb-2">
-              Bullet points included with this package (e.g. 2 HOURS OF GAMES, 2 BEVVIES PER PERSON).
-            </p>
-
-            <div className="space-y-2 mb-3">
-              {formData.details.map((detail, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 font-mono w-5 text-right">{idx + 1}.</span>
-                  <input
-                    type="text"
-                    value={detail}
-                    onChange={(e) => handleDetailChange(idx, e.target.value)}
-                    placeholder="e.g. 2 HOURS OF GAMES"
-                    className="flex-1 bg-[#121212] border border-[#3A3530] rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-[#E1017D] transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveDetail(idx)}
-                    className="text-gray-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-[#2A2A2A] transition-colors"
-                    title="Remove item"
-                  >
-                    <TrashIcon size={16} color="currentColor" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Add fast row */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={detailInput}
-                onChange={(e) => setDetailInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddDetail();
-                  }
-                }}
-                placeholder="Type a feature and press Enter or click Add"
-                className="flex-1 bg-[#121212] border border-[#3A3530] rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-[#E1017D] transition-colors"
-              />
-              <button
-                type="button"
-                onClick={handleAddDetail}
-                className="bg-[#2A2A2A] hover:bg-[#3A3530] text-white px-3 py-1.5 rounded-lg text-sm font-medium border border-[#3A3530] transition-colors"
-              >
-                + Add
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Button Text
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Games Time / Games <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                value={formData.buttonText}
-                onChange={(e) => setFormData({ ...formData, buttonText: e.target.value })}
-                placeholder="e.g. BOOK NOW"
-                className="w-full bg-[#121212] border border-[#3A3530] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#E1017D] transition-colors text-sm"
+                required
+                value={formData.games}
+                onChange={(e) => setFormData({ ...formData, games: e.target.value })}
+                placeholder="e.g. 2 HOURS OF GAMES or CHOOSE YOUR GAME TIME"
+                className="w-full bg-[#121212] border border-[#3A3530] rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-[#E1017D] transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Button Link (Booking URL)
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Welcome Bevvy (Drinks on arrival)
+              </label>
+              <textarea
+                rows={2}
+                value={formData.welcomeBevvy}
+                onChange={(e) => setFormData({ ...formData, welcomeBevvy: e.target.value })}
+                placeholder="e.g. PROSECCO, WINE OR BOTTLED BEER/CIDER/0% ON ARRIVAL"
+                className="w-full bg-[#121212] border border-[#3A3530] rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-[#E1017D] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Bevvies (Drinks Package)
+              </label>
+              <textarea
+                rows={2}
+                value={formData.bevvies}
+                onChange={(e) => setFormData({ ...formData, bevvies: e.target.value })}
+                placeholder="e.g. 2 HOUSE BEVVIES (COCKTAIL UPGRADE AVAILABLE)"
+                className="w-full bg-[#121212] border border-[#3A3530] rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-[#E1017D] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Scran (Food Package)
               </label>
               <input
-                type="url"
-                value={formData.buttonLink}
-                onChange={(e) => setFormData({ ...formData, buttonLink: e.target.value })}
-                placeholder="https://ecom.roller.app/..."
-                className="w-full bg-[#121212] border border-[#3A3530] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#E1017D] transition-colors text-sm"
+                type="text"
+                value={formData.scran}
+                onChange={(e) => setFormData({ ...formData, scran: e.target.value })}
+                placeholder="e.g. BOOM BITES - STREET FOOD BUFFET or N/A"
+                className="w-full bg-[#121212] border border-[#3A3530] rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-[#E1017D] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-300 mb-1">
+                Something Fun (Extra Perk / Treat)
+              </label>
+              <textarea
+                rows={2}
+                value={formData.somethingFun}
+                onChange={(e) => setFormData({ ...formData, somethingFun: e.target.value })}
+                placeholder="e.g. FESTIVE GROUP SHOT (SWITCH TO JOE & SEPHS POPCORN TO TAKE HOME) or N/A"
+                className="w-full bg-[#121212] border border-[#3A3530] rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-[#E1017D] transition-colors"
               />
             </div>
           </div>
@@ -238,7 +184,7 @@ const PackageEditModal: React.FC<PackageEditModalProps> = ({
             </button>
             <button
               type="submit"
-              className="bg-[#E1017D] hover:bg-[#c2016c] text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
+              className="bg-[#E1017D] hover:bg-[#c2016c] text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
             >
               {initialData ? 'Save Changes' : 'Add Package'}
             </button>
