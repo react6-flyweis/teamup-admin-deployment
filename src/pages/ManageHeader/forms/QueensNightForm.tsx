@@ -105,7 +105,7 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
   };
 
   const addStatBlock = () => {
-    setStatsBlocks([...statsBlocks, { id: Date.now().toString(), iconType: 'age', topText: '', mainText: '', subText: '' }]);
+    setStatsBlocks([...statsBlocks, { id: Date.now().toString(), icon: '', bgImage: '', topText: '', mainText: '', subText: '' }]);
   };
 
   const updateStatBlock = (id: string, field: keyof StatBlock, value: string) => {
@@ -290,28 +290,54 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
                 
                 <div className="mt-4 pt-4 border-t border-[#3A3530]">
                   <div className="flex items-center justify-between mb-4">
-                    <label className="text-sm font-medium text-gray-300">Stats Blocks (Age, Price, Time)</label>
+                    <label className="text-sm font-medium text-gray-300">Stats Blocks</label>
                     <button type="button" onClick={addStatBlock} className="text-xs bg-[#E1017D]/20 text-[#E1017D] px-3 py-1 rounded-md hover:bg-[#E1017D] hover:text-white transition-colors">
                       + Add Stat Block
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {statsBlocks.map((stat, index) => (
-                      <div key={stat.id} className="bg-[#1C1C1C] p-3 rounded-lg border border-[#3A3530] space-y-2 relative">
+                      <div key={stat.id} className="bg-[#1C1C1C] p-3 rounded-lg border border-[#3A3530] space-y-3 relative">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-gray-500">Block {index + 1}</span>
+                          <span className="text-xs text-gray-500 font-medium">Block {index + 1}</span>
                           <button type="button" onClick={() => removeStatBlock(stat.id)} className="text-gray-500 hover:text-red-500 transition-colors">
                             <TrashIcon />
                           </button>
                         </div>
-                        <select value={stat.iconType} onChange={e => updateStatBlock(stat.id, 'iconType', e.target.value)} className={inputSmCls}>
-                          <option value="age">Icon: Family (Age)</option>
-                          <option value="price">Icon: Dollar (Price)</option>
-                          <option value="time">Icon: Clock (Time)</option>
-                        </select>
-                        <input type="text" value={stat.topText} onChange={e => updateStatBlock(stat.id, 'topText', e.target.value)} placeholder="Top (e.g. AGE, FROM)" className={inputSmCls} />
-                        <input type="text" value={stat.mainText} onChange={e => updateStatBlock(stat.id, 'mainText', e.target.value)} placeholder="Main (e.g. 18+, $27.50)" className={inputSmCls} />
-                        <textarea value={stat.subText || ''} onChange={e => updateStatBlock(stat.id, 'subText', e.target.value)} placeholder="Subtext (e.g. PER PERSON...)" rows={2} className={inputSmCls} />
+                        <ImageInputWithUpload
+                          label="Icon"
+                          hint="1:1 Square • Rec: 64×64 or 120×120 px"
+                          value={stat.icon || ''}
+                          onChange={(url) => updateStatBlock(stat.id, 'icon', url)}
+                          placeholder="Paste icon URL or upload"
+                          inputClassName={inputSmCls}
+                          labelClassName={labelSmCls}
+                          previewWidth="w-12"
+                          previewHeight="h-12"
+                        />
+                        <ImageInputWithUpload
+                          label="Background Image"
+                          hint="Rec: Card background"
+                          value={stat.bgImage || ''}
+                          onChange={(url) => updateStatBlock(stat.id, 'bgImage', url)}
+                          placeholder="Paste bg image URL or upload"
+                          inputClassName={inputSmCls}
+                          labelClassName={labelSmCls}
+                          previewWidth="w-full"
+                          previewHeight="h-20"
+                        />
+                        <div>
+                          <label className={labelSmCls}>Top Text</label>
+                          <input type="text" value={stat.topText} onChange={e => updateStatBlock(stat.id, 'topText', e.target.value)} placeholder="Top (e.g. AGE, FROM)" className={inputSmCls} />
+                        </div>
+                        <div>
+                          <label className={labelSmCls}>Main Text</label>
+                          <input type="text" value={stat.mainText} onChange={e => updateStatBlock(stat.id, 'mainText', e.target.value)} placeholder="Main (e.g. 18+, $27.50)" className={inputSmCls} />
+                        </div>
+                        <div>
+                          <label className={labelSmCls}>Subtext</label>
+                          <textarea value={stat.subText || ''} onChange={e => updateStatBlock(stat.id, 'subText', e.target.value)} placeholder="Subtext (e.g. PER PERSON...)" rows={2} className={inputSmCls} />
+                        </div>
                       </div>
                     ))}
                   </div>
