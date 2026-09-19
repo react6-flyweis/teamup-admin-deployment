@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { uploadFile } from '@/utils/fileUpload';
 import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
-import type { HeaderSubItem, FeaturedEventCard, ChecklistItem, StatBlock } from './types';
+import type { HeaderSubItem, FeaturedEventCard, ChecklistItem, StatBlock } from '@/components/ManageHeader/types';
 import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 
 interface QueensNightFormProps {
-    onClose: () => void;
+  onClose: () => void;
   initialData?: HeaderSubItem | null;
-  onSave: (data: HeaderSubItem) => void;
+  onSave: (data: HeaderSubItem) => void | Promise<void>;
+  isSaving?: boolean;
 }
 
-const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData, onSave }) => {
+const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData, onSave, isSaving = false }) => {
   // Navigation & Identifiers
   const [name, setName] = useState('');
   const [path, setPath] = useState('');
@@ -20,7 +21,6 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
   const [pageHeadline, setPageHeadline] = useState('');
   const [pageHeroImage, setPageHeroImage] = useState('');
   const [heroBookNowLink, setHeroBookNowLink] = useState('');
-  const heroImageRef = useRef<HTMLInputElement>(null);
 
   // What's Included (Checklist)
   const [sectionHeadline, setSectionHeadline] = useState('');
@@ -105,7 +105,7 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
   };
 
   const addStatBlock = () => {
-    setStatsBlocks([...statsBlocks, { id: Date.now().toString(), iconType: 'age', topText: '', mainText: '', subText: '' }]);
+    setStatsBlocks([...statsBlocks, { id: Date.now().toString(), icon: '', bgImage: '', topText: '', mainText: '', subText: '' }]);
   };
 
   const updateStatBlock = (id: string, field: keyof StatBlock, value: string) => {
@@ -199,34 +199,28 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
                 <span className="text-[#E1017D]">02</span> Hero Section
               </h3>
               <div className="space-y-4 bg-[#252525] p-4 rounded-lg border border-[#3A3530]">
-                <div>
-                  <label className={labelCls}>Main Headline</label>
-                  <input type="text" value={pageHeadline} onChange={e => setPageHeadline(e.target.value)} placeholder="e.g. QUEENS NIGHT" required className={inputCls} />
-                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>
-                      Hero Image URL <span className="text-xs text-gray-400 font-normal ml-1.5">(16:9 to 21:9 • Rec: 1905×805 or 1920×1080 px)</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <input type="text" value={pageHeroImage} onChange={e => setPageHeroImage(e.target.value)} placeholder="Paste image URL here" className={inputCls} />
-                      <button type="button" onClick={() => heroImageRef.current?.click()} className="px-4 bg-[#3A3530] text-white rounded-lg hover:bg-[#4A4540] transition-colors">
-                        <UploadIcon />
-                      </button>
-                      <input type="file" ref={heroImageRef} className="hidden" accept="image/*" onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => setPageHeroImage(reader.result as string);
-                          reader.readAsDataURL(file);
-                        }
-                      }} />
-                    </div>
+                    <label className={labelCls}>Main Headline</label>
+                    <input type="text" value={pageHeadline} onChange={e => setPageHeadline(e.target.value)} placeholder="e.g. QUEENS NIGHT" required className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>Hero 'Book Now' Link</label>
                     <input type="text" value={heroBookNowLink} onChange={e => setHeroBookNowLink(e.target.value)} placeholder="e.g. /book/queens-night" className={inputCls} />
                   </div>
+                </div>
+                <div>
+                  <ImageInputWithUpload
+                    label="Hero Image URL"
+                    hint="16:9 to 21:9 • Rec: 1905×805 or 1920×1080 px"
+                    value={pageHeroImage}
+                    onChange={setPageHeroImage}
+                    placeholder="Paste image URL or click upload"
+                    inputClassName={inputCls}
+                    labelClassName={labelCls}
+                    previewWidth="w-full"
+                    previewHeight="h-36"
+                  />
                 </div>
               </div>
             </section>
@@ -296,28 +290,54 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
                 
                 <div className="mt-4 pt-4 border-t border-[#3A3530]">
                   <div className="flex items-center justify-between mb-4">
-                    <label className="text-sm font-medium text-gray-300">Stats Blocks (Age, Price, Time)</label>
+                    <label className="text-sm font-medium text-gray-300">Stats Blocks</label>
                     <button type="button" onClick={addStatBlock} className="text-xs bg-[#E1017D]/20 text-[#E1017D] px-3 py-1 rounded-md hover:bg-[#E1017D] hover:text-white transition-colors">
                       + Add Stat Block
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {statsBlocks.map((stat, index) => (
-                      <div key={stat.id} className="bg-[#1C1C1C] p-3 rounded-lg border border-[#3A3530] space-y-2 relative">
+                      <div key={stat.id} className="bg-[#1C1C1C] p-3 rounded-lg border border-[#3A3530] space-y-3 relative">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-gray-500">Block {index + 1}</span>
+                          <span className="text-xs text-gray-500 font-medium">Block {index + 1}</span>
                           <button type="button" onClick={() => removeStatBlock(stat.id)} className="text-gray-500 hover:text-red-500 transition-colors">
                             <TrashIcon />
                           </button>
                         </div>
-                        <select value={stat.iconType} onChange={e => updateStatBlock(stat.id, 'iconType', e.target.value)} className={inputSmCls}>
-                          <option value="age">Icon: Family (Age)</option>
-                          <option value="price">Icon: Dollar (Price)</option>
-                          <option value="time">Icon: Clock (Time)</option>
-                        </select>
-                        <input type="text" value={stat.topText} onChange={e => updateStatBlock(stat.id, 'topText', e.target.value)} placeholder="Top (e.g. AGE, FROM)" className={inputSmCls} />
-                        <input type="text" value={stat.mainText} onChange={e => updateStatBlock(stat.id, 'mainText', e.target.value)} placeholder="Main (e.g. 18+, $27.50)" className={inputSmCls} />
-                        <textarea value={stat.subText || ''} onChange={e => updateStatBlock(stat.id, 'subText', e.target.value)} placeholder="Subtext (e.g. PER PERSON...)" rows={2} className={inputSmCls} />
+                        <ImageInputWithUpload
+                          label="Icon"
+                          hint="1:1 Square • Rec: 64×64 or 120×120 px"
+                          value={stat.icon || ''}
+                          onChange={(url) => updateStatBlock(stat.id, 'icon', url)}
+                          placeholder="Paste icon URL or upload"
+                          inputClassName={inputSmCls}
+                          labelClassName={labelSmCls}
+                          previewWidth="w-12"
+                          previewHeight="h-12"
+                        />
+                        <ImageInputWithUpload
+                          label="Background Image"
+                          hint="Rec: Card background"
+                          value={stat.bgImage || ''}
+                          onChange={(url) => updateStatBlock(stat.id, 'bgImage', url)}
+                          placeholder="Paste bg image URL or upload"
+                          inputClassName={inputSmCls}
+                          labelClassName={labelSmCls}
+                          previewWidth="w-full"
+                          previewHeight="h-20"
+                        />
+                        <div>
+                          <label className={labelSmCls}>Top Text</label>
+                          <input type="text" value={stat.topText} onChange={e => updateStatBlock(stat.id, 'topText', e.target.value)} placeholder="Top (e.g. AGE, FROM)" className={inputSmCls} />
+                        </div>
+                        <div>
+                          <label className={labelSmCls}>Main Text</label>
+                          <input type="text" value={stat.mainText} onChange={e => updateStatBlock(stat.id, 'mainText', e.target.value)} placeholder="Main (e.g. 18+, $27.50)" className={inputSmCls} />
+                        </div>
+                        <div>
+                          <label className={labelSmCls}>Subtext</label>
+                          <textarea value={stat.subText || ''} onChange={e => updateStatBlock(stat.id, 'subText', e.target.value)} placeholder="Subtext (e.g. PER PERSON...)" rows={2} className={inputSmCls} />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -410,8 +430,14 @@ const QueensNightForm: React.FC<QueensNightFormProps> = ({ onClose, initialData,
           <button type="button" onClick={onClose} className="px-6 py-2.5 text-sm font-medium text-gray-300 hover:text-white transition-colors">
             Cancel
           </button>
-          <button type="submit" form="queens-night-form" className="px-6 py-2.5 bg-[#E1017D] text-white text-sm font-medium rounded-lg hover:bg-[#C0006A] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#E1017D]/20">
-            Save Changes
+          <button
+            type="submit"
+            form="queens-night-form"
+            disabled={isSaving}
+            className="px-6 py-2.5 bg-[#E1017D] text-white text-sm font-medium rounded-lg hover:bg-[#C0006A] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#E1017D]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSaving && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>

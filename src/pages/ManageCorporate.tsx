@@ -11,13 +11,15 @@ import CorporatePackagesForm from '@/components/ManageCorporate/CorporatePackage
 import CorporateBookOnlineForm from '@/components/ManageCorporate/CorporateBookOnlineForm';
 import CorporatePrivateHireForm from '@/components/ManageCorporate/CorporatePrivateHireForm';
 import CorporateOtherGamesForm from '@/components/ManageCorporate/CorporateOtherGamesForm';
+import SuccessModal from '@/components/common/SuccessModal';
 
 type Tab = 'all' | 'hero' | 'packages' | 'promos' | 'games';
 
 const ManageCorporate: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('all');
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [savingSection, setSavingSection] = useState<string | null>(null);
+  const [errorSection, setErrorSection] = useState<{ section: string; message: string } | null>(null);
+  const [successModalData, setSuccessModalData] = useState<{ title: string; message: string } | null>(null);
 
   const { selectedLocation } = useLocationStore();
   const locationSlug = selectedLocation?.slug;
@@ -41,8 +43,14 @@ const ManageCorporate: React.FC = () => {
     otherGames: rawCorporate?.otherGames ?? DEFAULT_CORPORATES_DATA.otherGames,
   }), [rawCorporate]);
 
-  const handleSaveCorporate = (partial: Partial<CorporatesData>, label: string) => {
-    setErrorMsg(null);
+  const handleSaveCorporate = (
+    partial: Partial<CorporatesData>,
+    sectionKey: string,
+    label: string
+  ) => {
+    setErrorSection(null);
+    setSavingSection(sectionKey);
+
     const merged: CorporatesData = {
       ...corporateData,
       ...partial,
@@ -52,13 +60,18 @@ const ManageCorporate: React.FC = () => {
       { corporates: merged },
       {
         onSuccess: () => {
-          setSuccessMsg(`${label} saved successfully!`);
-          setTimeout(() => setSuccessMsg(null), 3500);
+          setSavingSection(null);
+          setSuccessModalData({
+            title: 'Corporate Saved!',
+            message: `${label} has been saved successfully.`,
+          });
         },
         onError: (err: unknown) => {
+          setSavingSection(null);
           console.error(`Failed to update ${label}:`, err);
-          setErrorMsg(`Failed to save ${label}. Please try again.`);
-          setTimeout(() => setErrorMsg(null), 5000);
+          const apiErr = err as { response?: { data?: { message?: string } }; message?: string };
+          const msg = apiErr?.response?.data?.message || apiErr?.message || `Failed to save ${label}. Please try again.`;
+          setErrorSection({ section: sectionKey, message: msg });
         },
       }
     );
@@ -114,32 +127,15 @@ const ManageCorporate: React.FC = () => {
         </p>
       </div>
 
-      {/* Notifications */}
-      {successMsg && (
-        <div className="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-sm flex items-center justify-between">
-          <span>{successMsg}</span>
-          <button onClick={() => setSuccessMsg(null)} className="text-gray-400 hover:text-white text-xs">
-            ✕
-          </button>
-        </div>
-      )}
-
-      {errorMsg && (
-        <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center justify-between">
-          <span>{errorMsg}</span>
-          <button onClick={() => setErrorMsg(null)} className="text-gray-400 hover:text-white text-xs">
-            ✕
-          </button>
-        </div>
-      )}
-
-
       {/* Tabs */}
       <div className="flex space-x-1 border-b border-[#3A3530] mb-6 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              setErrorSection(null);
+            }}
             className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
               activeTab === tab.id
                 ? 'border-[#E1017D] text-[#E1017D]'
@@ -160,8 +156,9 @@ const ManageCorporate: React.FC = () => {
               heroTitle: corporateData.heroTitle || '',
               heroImageUrl: corporateData.heroImageUrl || '',
             }}
-            onSave={(heroFields) => handleSaveCorporate(heroFields, 'Hero Section')}
-            isSaving={updateCorporateMutation.isPending}
+            onSave={(heroFields) => handleSaveCorporate(heroFields, 'hero', 'Hero Section')}
+            isSaving={savingSection === 'hero'}
+            errorMessage={errorSection?.section === 'hero' ? errorSection.message : null}
           />
         )}
 
@@ -173,8 +170,9 @@ const ManageCorporate: React.FC = () => {
               packages: corporateData.packages || [],
               budgetText: corporateData.budgetText || '',
             }}
-            onSave={(packagesFields) => handleSaveCorporate(packagesFields, 'Corporate Packages')}
-            isSaving={updateCorporateMutation.isPending}
+            onSave={(packagesFields) => handleSaveCorporate(packagesFields, 'packages', 'Corporate Packages')}
+            isSaving={savingSection === 'packages'}
+            errorMessage={errorSection?.section === 'packages' ? errorSection.message : null}
           />
         )}
 
@@ -191,9 +189,10 @@ const ManageCorporate: React.FC = () => {
                 }
               }
               onSave={(bookOnlineFields) =>
-                handleSaveCorporate({ bookOnline: bookOnlineFields }, 'Book Online Section')
+                handleSaveCorporate({ bookOnline: bookOnlineFields }, 'bookOnline', 'Book Online Section')
               }
-              isSaving={updateCorporateMutation.isPending}
+              isSaving={savingSection === 'bookOnline'}
+              errorMessage={errorSection?.section === 'bookOnline' ? errorSection.message : null}
             />
 
             <CorporatePrivateHireForm
@@ -207,9 +206,10 @@ const ManageCorporate: React.FC = () => {
                 }
               }
               onSave={(privateHireFields) =>
-                handleSaveCorporate({ privateHire: privateHireFields }, 'Private Hire Section')
+                handleSaveCorporate({ privateHire: privateHireFields }, 'privateHire', 'Private Hire Section')
               }
-              isSaving={updateCorporateMutation.isPending}
+              isSaving={savingSection === 'privateHire'}
+              errorMessage={errorSection?.section === 'privateHire' ? errorSection.message : null}
             />
           </div>
         )}
@@ -223,12 +223,21 @@ const ManageCorporate: React.FC = () => {
               }
             }
             onSave={(gamesFields) =>
-              handleSaveCorporate({ otherGames: gamesFields }, 'Other Games Section')
+              handleSaveCorporate({ otherGames: gamesFields }, 'otherGames', 'Other Games Section')
             }
-            isSaving={updateCorporateMutation.isPending}
+            isSaving={savingSection === 'otherGames'}
+            errorMessage={errorSection?.section === 'otherGames' ? errorSection.message : null}
           />
         )}
       </div>
+
+      <SuccessModal
+        isOpen={Boolean(successModalData)}
+        title={successModalData?.title}
+        message={successModalData?.message}
+        buttonText="OK"
+        onConfirm={() => setSuccessModalData(null)}
+      />
     </div>
   );
 };

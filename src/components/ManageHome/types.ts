@@ -4,6 +4,7 @@ export interface HeroSection {
   title: string;
   subtitle: string;
   backgroundMediaUrl: string;
+  videoUrl?: string;
   buttons: {
     primaryText: string;
     primaryLink: string;
@@ -32,6 +33,7 @@ export interface OperatingHours {
 export interface LocationInfo {
   address: string;
   mapEmbedUrl: string;
+  mapImage?: string;
   hours: OperatingHours[];
 }
 
@@ -80,4 +82,5 @@ export interface HomePageData {
   bites: BitesAndDrinks;
   nightsOut: NightsOut;
   newsletter?: NewsletterSection;
+  mainBg?: string;
 }

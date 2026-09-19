@@ -13,6 +13,7 @@ export interface ButtonData {
 
 export interface HeroData {
   backgroundMediaUrl: string;
+  videoUrl?: string;
   title: string;
   subtitle: string;
   primaryButton: ButtonData;
@@ -90,11 +91,12 @@ export interface NewsletterSectionData {
 
 export interface CorporatePackageItem {
   title: string;
+  games: string;
+  welcomeBevvy: string;
+  bevvies: string;
+  scran: string;
+  somethingFun: string;
   price: string;
-  iconUrl: string;
-  details: string[];
-  buttonText: string;
-  buttonLink: string;
 }
 
 export interface CorporateBookOnlineData {
@@ -147,6 +149,7 @@ export interface HomeData {
   newsletter?: NewsletterSectionData;
   signUp?: NewsletterSectionData;
   corporates?: CorporatesData;
+  mainBg?: string;
 }
 
 export interface HomeContent {

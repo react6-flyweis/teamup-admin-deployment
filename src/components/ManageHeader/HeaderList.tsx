@@ -16,12 +16,28 @@ const HeaderList: React.FC = () => {
 
   const categories: HeaderCategory[] = apiCategoriesData?.categories || [];
 
-  const toggleVisibility = (category: HeaderCategory) => {
-    updateCategory.mutate({
-      categoryId: category.id,
-      name: category.name,
-      isActive: !!category.isHidden, // toggling isHidden -> isActive
-    });
+  const [updatingCategoryIds, setUpdatingCategoryIds] = useState<Record<string, boolean>>({});
+
+  const toggleVisibility = async (category: HeaderCategory) => {
+    const isCurrentlyActive = category.isActive !== undefined ? category.isActive : !category.isHidden;
+    const newIsActive = !isCurrentlyActive;
+    setUpdatingCategoryIds(prev => ({ ...prev, [category.id]: true }));
+    try {
+      await updateCategory.mutateAsync({
+        categoryId: category.id,
+        name: category.name,
+        isActive: newIsActive,
+        isHidden: !newIsActive,
+      });
+    } catch (err) {
+      console.error('Error toggling category in HeaderList:', err);
+    } finally {
+      setUpdatingCategoryIds(prev => {
+        const next = { ...prev };
+        delete next[category.id];
+        return next;
+      });
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -84,14 +100,16 @@ const HeaderList: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <div title={category.isHidden ? "Show Category" : "Hide Category"}>
                     <Toggle 
-                      checked={!category.isHidden}
+                      checked={category.isActive !== undefined ? category.isActive : !category.isHidden}
                       onChange={() => toggleVisibility(category)}
+                      loading={!!updatingCategoryIds[category.id]}
+                      disabled={!!updatingCategoryIds[category.id]}
                       activeColor="#10A200"
                       inactiveColor="#EC221F"
                     />
                   </div>
                   <button 
-                    onClick={() => navigate(`/manage-header/category/${category.id}`)}
+                    onClick={() => navigate(`/manage-header/category/${category.id}?tab=${category.id}`)}
                     className="text-blue-400 hover:text-blue-300 transition-colors"
                   >
                     <EditIcon size={20} color="currentColor" />

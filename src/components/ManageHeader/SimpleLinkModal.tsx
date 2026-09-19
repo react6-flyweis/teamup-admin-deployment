@@ -27,9 +27,11 @@ const SimpleLinkModal: React.FC<SimpleLinkModalProps> = ({
   const [path, setPath] = useState('');
   const [icon, setIcon] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const iconFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setErrorMessage(null);
     if (initialData) {
       setName(initialData.name || '');
       setPath(initialData.path || initialData.slug || '');
@@ -60,6 +62,7 @@ const SimpleLinkModal: React.FC<SimpleLinkModalProps> = ({
     if (!name.trim()) return;
 
     setLoading(true);
+    setErrorMessage(null);
     const linkUrl = path.trim();
     const subItemName = name.trim();
 
@@ -92,29 +95,34 @@ const SimpleLinkModal: React.FC<SimpleLinkModalProps> = ({
           isActive: true,
         });
       }
-    } catch (err) {
+
+      const savedSubItem: HeaderSubItem = {
+        id: initialData?.id || Date.now().toString(),
+        name: subItemName,
+        path: linkUrl,
+        slug: linkUrl,
+        icon: icon,
+        type: 'simple-link',
+        pageType: 'simple-link',
+        isHidden: false,
+        isActive: true,
+      };
+
+      if (onSaveSuccess) {
+        onSaveSuccess(savedSubItem);
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      onClose();
+    } catch (err: unknown) {
       console.error('Error saving simple link sub-item:', err);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiErr = err as any;
+      const msg = apiErr?.response?.data?.message || apiErr?.message || 'Failed to save simple link. Please try again.';
+      setErrorMessage(msg);
+    } finally {
+      setLoading(false);
     }
-
-    const savedSubItem: HeaderSubItem = {
-      id: initialData?.id || Date.now().toString(),
-      name: subItemName,
-      path: linkUrl,
-      slug: linkUrl,
-      icon: icon,
-      type: 'simple-link',
-      pageType: 'simple-link',
-      isHidden: false,
-      isActive: true,
-    };
-
-    if (onSaveSuccess) {
-      onSaveSuccess(savedSubItem);
-    }
-
-    await queryClient.invalidateQueries({ queryKey: ['header-categories'] });
-    setLoading(false);
-    onClose();
   };
 
   const inputCls =
@@ -141,6 +149,22 @@ const SimpleLinkModal: React.FC<SimpleLinkModalProps> = ({
             <CloseIcon />
           </button>
         </div>
+
+        {errorMessage && (
+          <div className="p-4 bg-red-900/40 border-b border-red-500/60 text-red-200 text-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <span>{errorMessage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="text-red-300 hover:text-white text-xs underline ml-4 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">

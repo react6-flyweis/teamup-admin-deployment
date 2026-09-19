@@ -46,6 +46,8 @@ export interface BoomBundlePayload {
   path: string;
   icon?: string;
   pageHeadline?: string;
+  heroHighlight?: string;
+  heroSubtitle?: string;
   pageHeroImage?: string;
   heroBookNowLink?: string;
   sectionHeadline?: string;

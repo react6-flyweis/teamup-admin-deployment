@@ -40,7 +40,9 @@ export interface FeaturedEventCard {
 
 export interface StatBlock {
   id: string;
-  iconType: 'age' | 'price' | 'time' | string;
+  iconType?: 'age' | 'price' | 'time' | string;
+  icon?: string;
+  bgImage?: string;
   topText: string;
   mainText: string;
   subText?: string;
@@ -128,7 +130,10 @@ export interface HeaderSubItem {
 
 export interface HeaderCategory {
   id: string;
+  _id?: string;
   name: string;
   isHidden: boolean;
+  isActive?: boolean;
   subItems: HeaderSubItem[];
 }
+

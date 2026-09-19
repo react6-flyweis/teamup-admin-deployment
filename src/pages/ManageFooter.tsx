@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { EditIcon, TrashIcon } from '@/assets/icons';
-import FooterLinkModal from '@/components/ManageFooter/FooterLinkModal';
+import React, { useState, useEffect } from "react";
+import { EditIcon, TrashIcon } from "@/assets/icons";
+import FooterLinkModal from "@/components/ManageFooter/FooterLinkModal";
+import SuccessModal from "@/components/common/SuccessModal";
 import {
   useContentPagesQuery,
   useCreateContentPageMutation,
   useUpdateContentPageMutation,
   useDeleteContentPageMutation,
-} from '@/hooks/useContentPages';
-import { useFooterQuery, useUpdateFooterMutation } from '@/hooks/useFooter';
-import { useLocationStore } from '@/store/locationStore';
+} from "@/hooks/useContentPages";
+import { useFooterQuery, useUpdateFooterMutation } from "@/hooks/useFooter";
+import { useLocationStore } from "@/store/locationStore";
 
 interface FooterLink {
   id: string;
@@ -21,24 +22,27 @@ const ManageFooter: React.FC = () => {
   const { selectedLocation } = useLocationStore();
   const locationSlug = selectedLocation?.slug;
 
-  const { data: pagesData, isLoading: isPagesLoading, error: pagesError } = useContentPagesQuery();
-  const { data: footerData, isLoading: isFooterLoading, error: footerError } = useFooterQuery(locationSlug);
+  const {
+    data: pagesData,
+    isLoading: isPagesLoading,
+    error: pagesError,
+  } = useContentPagesQuery();
+  const {
+    data: footerData,
+    isLoading: isFooterLoading,
+    error: footerError,
+  } = useFooterQuery(locationSlug);
   const createMutation = useCreateContentPageMutation();
   const updateMutation = useUpdateContentPageMutation();
   const deleteMutation = useDeleteContentPageMutation();
   const updateFooterMutation = useUpdateFooterMutation(locationSlug);
 
   const [links, setLinks] = useState<FooterLink[]>([]);
-  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
-    if (feedback) {
-      const timer = setTimeout(() => {
-        setFeedback(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [feedback]);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [successModalData, setSuccessModalData] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     if (pagesData?.pages) {
@@ -48,45 +52,52 @@ const ManageFooter: React.FC = () => {
           label: page.title.toUpperCase(),
           url: `/${page.slug}`,
           content: page.content,
-        }))
+        })),
       );
     }
   }, [pagesData]);
 
   const [companyInfo, setCompanyInfo] = useState({
-    address: '',
-    phone: '',
-    copyright: '',
+    addressLabel: "",
+    address: "",
+    phone: "",
+    copyright: "",
   });
 
   const [socials, setSocials] = useState({
-    facebook: '',
-    instagram: '',
-    tiktok: '',
+    facebook: "",
+    instagram: "",
+    tiktok: "",
   });
 
   useEffect(() => {
     if (footerData?.content?.data) {
-      const { companyInfo: apiCompanyInfo, socialMediaLinks: apiSocials } = footerData.content.data;
+      const { companyInfo: apiCompanyInfo, socialMediaLinks: apiSocials } =
+        footerData.content.data;
       setCompanyInfo({
-        address: apiCompanyInfo?.officeAddress || '',
-        phone: apiCompanyInfo?.phoneNumber || '',
-        copyright: apiCompanyInfo?.copyrightText || '',
+        addressLabel:
+          apiCompanyInfo?.addressLabel || apiCompanyInfo?.addresslabel || "",
+        address: apiCompanyInfo?.officeAddress || "",
+        phone: apiCompanyInfo?.phoneNumber || "",
+        copyright: apiCompanyInfo?.copyrightText || "",
       });
       setSocials({
-        facebook: apiSocials?.facebookUrl || '',
-        instagram: apiSocials?.instagramUrl || '',
-        tiktok: apiSocials?.tiktokUrl || '',
+        facebook: apiSocials?.facebookUrl || "",
+        instagram: apiSocials?.instagramUrl || "",
+        tiktok: apiSocials?.tiktokUrl || "",
       });
     }
   }, [footerData]);
 
   const handleSaveFooterChanges = async () => {
+    setSaveError(null);
     try {
       await updateFooterMutation.mutateAsync({
-        section: 'footer',
+        section: "footer",
         data: {
           companyInfo: {
+            addressLabel: companyInfo.addressLabel,
+            addresslabel: companyInfo.addressLabel,
             officeAddress: companyInfo.address,
             phoneNumber: companyInfo.phone,
             copyrightText: companyInfo.copyright,
@@ -99,10 +110,21 @@ const ManageFooter: React.FC = () => {
         },
         isActive: true,
       });
-      setFeedback({ message: 'Footer changes saved successfully!', type: 'success' });
-    } catch (err) {
-      console.error('Failed to save footer changes:', err);
-      setFeedback({ message: 'Failed to save footer changes.', type: 'error' });
+      setSuccessModalData({
+        title: "Footer Saved!",
+        message: "Footer changes have been saved successfully.",
+      });
+    } catch (err: unknown) {
+      console.error("Failed to save footer changes:", err);
+      const apiErr = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      setSaveError(
+        apiErr?.response?.data?.message ||
+          apiErr?.message ||
+          "Failed to save footer changes. Please try again.",
+      );
     }
   };
 
@@ -120,8 +142,17 @@ const ManageFooter: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveModal = async (label: string, url: string, content: string) => {
-    const slug = url.replace(/^\//, '');
+  const handleSaveModal = async (
+    label: string,
+    url: string,
+    content: string,
+  ) => {
+    const slug =
+      url.replace(/^\//, "") ||
+      label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
     const title = label;
     const excerpt = `${title} information for Team Up.`;
     const metaTitle = `${title} | Team Up`;
@@ -130,12 +161,15 @@ const ManageFooter: React.FC = () => {
     try {
       if (editingLink) {
         // Edit existing - get slug from the current link's URL path
-        const currentSlug = editingLink.url.replace(/^\//, '');
+        const currentSlug = editingLink.url.replace(/^\//, "");
         await updateMutation.mutateAsync({
           slug: currentSlug,
           data: { title, slug, content, excerpt, metaTitle, metaDescription },
         });
-        setFeedback({ message: `Successfully updated page "${title}"!`, type: 'success' });
+        setSuccessModalData({
+          title: "Page Updated!",
+          message: `Successfully updated page "${title}".`,
+        });
       } else {
         // Add new
         await createMutation.mutateAsync({
@@ -147,11 +181,14 @@ const ManageFooter: React.FC = () => {
           metaDescription,
           isActive: true,
         });
-        setFeedback({ message: `Successfully created page "${title}"!`, type: 'success' });
+        setSuccessModalData({
+          title: "Page Created!",
+          message: `Successfully created page "${title}".`,
+        });
       }
       setIsModalOpen(false);
     } catch (err) {
-      console.error('Failed to save page:', err);
+      console.error("Failed to save page:", err);
       throw err;
     }
   };
@@ -160,7 +197,7 @@ const ManageFooter: React.FC = () => {
     try {
       await deleteMutation.mutateAsync(id);
     } catch (err) {
-      console.error('Failed to delete page:', err);
+      console.error("Failed to delete page:", err);
     }
   };
 
@@ -186,24 +223,10 @@ const ManageFooter: React.FC = () => {
     <div className="p-6 text-white min-h-screen">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-2">Manage Footer</h1>
-        <p className="text-gray-400">Configure the content displayed in the website footer.</p>
+        <p className="text-gray-400">
+          Configure the content displayed in the website footer.
+        </p>
       </div>
-
-      {feedback && (
-        <div className={`mb-6 p-4 rounded-lg border text-sm flex justify-between items-center ${
-          feedback.type === 'success' 
-            ? 'bg-green-500/10 border-green-500/20 text-green-400' 
-            : 'bg-red-500/10 border-red-500/20 text-red-400'
-        }`}>
-          <span>{feedback.message}</span>
-          <button 
-            onClick={() => setFeedback(null)} 
-            className="text-gray-400 hover:text-white ml-4 font-bold text-xs"
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column */}
@@ -211,7 +234,9 @@ const ManageFooter: React.FC = () => {
           {/* Footer Links */}
           <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#3A3530]">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-white">Top Navigation Links & Content</h2>
+              <h2 className="text-xl font-semibold text-white">
+                Top Navigation Links & Content
+              </h2>
               <button
                 onClick={handleOpenAddModal}
                 className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -221,15 +246,22 @@ const ManageFooter: React.FC = () => {
             </div>
             <div className="space-y-3">
               {links.map((link) => (
-                <div key={link.id} className="flex items-center gap-4 p-3 border border-[#3A3530] rounded-lg bg-[#222222]">
+                <div
+                  key={link.id}
+                  className="flex items-center gap-4 p-3 border border-[#3A3530] rounded-lg bg-[#222222]"
+                >
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-white mb-1">{link.label}</div>
+                    <div className="text-sm font-bold text-white mb-1">
+                      {link.label}
+                    </div>
                     <div className="text-xs text-gray-500 mb-1">{link.url}</div>
                     <div className="text-xs text-gray-400 line-clamp-1 italic bg-[#1A1A1A] p-1 rounded">
                       {(() => {
-                        const plainText = link.content.replace(/<[^>]+>/g, '');
-                        if (!plainText) return 'No content written...';
-                        return plainText.length > 100 ? `${plainText.substring(0, 100)}...` : plainText;
+                        const plainText = link.content.replace(/<[^>]+>/g, "");
+                        if (!plainText) return "No content written...";
+                        return plainText.length > 100
+                          ? `${plainText.substring(0, 100)}...`
+                          : plainText;
                       })()}
                     </div>
                   </div>
@@ -257,31 +289,67 @@ const ManageFooter: React.FC = () => {
         <div className="space-y-8">
           {/* Company Info */}
           <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#3A3530]">
-            <h2 className="text-xl font-semibold text-white mb-6">Company Information</h2>
+            <h2 className="text-xl font-semibold text-white mb-6">
+              Company Information
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Office Address</label>
-                <textarea
-                  value={companyInfo.address}
-                  onChange={(e) => setCompanyInfo({ ...companyInfo, address: e.target.value })}
-                  className="w-full h-20 p-3 rounded bg-[#2A2A2A] border border-[#3A3530] text-white resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Phone Number</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  {" "}
+                  Address Label
+                </label>
                 <input
                   type="text"
-                  value={companyInfo.phone}
-                  onChange={(e) => setCompanyInfo({ ...companyInfo, phone: e.target.value })}
+                  placeholder="e.g. Office Address"
+                  value={companyInfo.addressLabel}
+                  onChange={(e) =>
+                    setCompanyInfo({
+                      ...companyInfo,
+                      addressLabel: e.target.value,
+                    })
+                  }
                   className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Copyright Text</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  {" "}
+                  Address
+                </label>
+                <textarea
+                  value={companyInfo.address}
+                  onChange={(e) =>
+                    setCompanyInfo({ ...companyInfo, address: e.target.value })
+                  }
+                  className="w-full h-20 p-3 rounded bg-[#2A2A2A] border border-[#3A3530] text-white resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={companyInfo.phone}
+                  onChange={(e) =>
+                    setCompanyInfo({ ...companyInfo, phone: e.target.value })
+                  }
+                  className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Copyright Text
+                </label>
                 <input
                   type="text"
                   value={companyInfo.copyright}
-                  onChange={(e) => setCompanyInfo({ ...companyInfo, copyright: e.target.value })}
+                  onChange={(e) =>
+                    setCompanyInfo({
+                      ...companyInfo,
+                      copyright: e.target.value,
+                    })
+                  }
                   className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
                 />
               </div>
@@ -290,32 +358,46 @@ const ManageFooter: React.FC = () => {
 
           {/* Social Media Links */}
           <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#3A3530]">
-            <h2 className="text-xl font-semibold text-white mb-6">Social Media Links</h2>
+            <h2 className="text-xl font-semibold text-white mb-6">
+              Social Media Links
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Facebook URL</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Facebook URL
+                </label>
                 <input
                   type="text"
                   value={socials.facebook}
-                  onChange={(e) => setSocials({ ...socials, facebook: e.target.value })}
+                  onChange={(e) =>
+                    setSocials({ ...socials, facebook: e.target.value })
+                  }
                   className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Instagram URL</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Instagram URL
+                </label>
                 <input
                   type="text"
                   value={socials.instagram}
-                  onChange={(e) => setSocials({ ...socials, instagram: e.target.value })}
+                  onChange={(e) =>
+                    setSocials({ ...socials, instagram: e.target.value })
+                  }
                   className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">TikTok URL</label>
+                <label className="block text-sm text-gray-400 mb-2">
+                  TikTok URL
+                </label>
                 <input
                   type="text"
                   value={socials.tiktok}
-                  onChange={(e) => setSocials({ ...socials, tiktok: e.target.value })}
+                  onChange={(e) =>
+                    setSocials({ ...socials, tiktok: e.target.value })
+                  }
                   className="w-full h-10 px-4 rounded bg-[#2A2A2A] border border-[#3A3530] text-white"
                 />
               </div>
@@ -324,26 +406,45 @@ const ManageFooter: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+        {saveError && (
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-4 py-2.5 rounded-lg">
+            {saveError}
+          </div>
+        )}
         <button
+          type="button"
           onClick={handleSaveFooterChanges}
           disabled={updateFooterMutation.isPending}
-          className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-8 py-3 rounded-lg font-medium transition-colors text-lg disabled:opacity-50"
+          className="bg-[#E1017D] hover:bg-[#c0016a] text-white px-8 py-3 rounded-lg font-medium transition-colors text-lg disabled:opacity-50 flex items-center gap-2 cursor-pointer"
         >
-          {updateFooterMutation.isPending ? 'Saving...' : 'Save All Footer Changes'}
+          {updateFooterMutation.isPending && (
+            <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
+          )}
+          {updateFooterMutation.isPending
+            ? "Saving..."
+            : "Save All Footer Changes"}
         </button>
       </div>
 
       {isModalOpen && (
         <FooterLinkModal
-          initialLabel={editingLink?.label || ''}
-          initialUrl={editingLink?.url || ''}
-          initialContent={editingLink?.content || ''}
+          initialLabel={editingLink?.label || ""}
+          initialUrl={editingLink?.url || ""}
+          initialContent={editingLink?.content || ""}
           isAdding={!editingLink}
           onSave={handleSaveModal}
           onClose={() => setIsModalOpen(false)}
         />
       )}
+
+      <SuccessModal
+        isOpen={Boolean(successModalData)}
+        title={successModalData?.title}
+        message={successModalData?.message}
+        buttonText="OK"
+        onConfirm={() => setSuccessModalData(null)}
+      />
     </div>
   );
 };

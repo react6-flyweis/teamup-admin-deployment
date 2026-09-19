@@ -17,6 +17,7 @@ import {
   extractId,
   type BoomBundlePayload,
 } from "@/hooks/useHeaderSubItems";
+import SuccessModal from "@/components/common/SuccessModal";
 
 const BoomBundleFormPage: React.FC = () => {
   const { categoryId, subItemId } = useParams<{
@@ -32,6 +33,9 @@ const BoomBundleFormPage: React.FC = () => {
 
   const [initialData, setInitialData] = useState<HeaderSubItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -39,81 +43,85 @@ const BoomBundleFormPage: React.FC = () => {
     const loadData = async () => {
       if (isMenuItemLoading) return;
 
+      // 1. Fetch from boom bundle API if subItemId exists and is not 'new'
       if (subItemId && subItemId !== "new") {
         const menuItem = menuItemResponse?.menuItem;
         const linkedId = menuItem?.linkedItemId || subItemId;
-        let realData = null;
 
         if (linkedId) {
           try {
             const res = await fetchBoomBundle(linkedId);
-            realData = res?.boomBundle || res?.data || res;
+            const bundle = res?.boomBundle || res?.data || res;
+            if (bundle && isMounted) {
+              setInitialData({
+                id: menuItem?._id || subItemId,
+                name: menuItem?.title || bundle.name || "",
+                path: menuItem?.linkUrl || bundle.path || "",
+                icon: menuItem?.iconUrl || bundle.icon || "",
+                pageType: "boom-bundle",
+                linkedItemId: bundle._id || linkedId,
+                pageHeadline: bundle.pageHeadline || menuItem?.title || "",
+                heroHighlight: bundle.heroHighlight || "",
+                heroSubtitle: bundle.heroSubtitle || "",
+                pageHeroImage: bundle.pageHeroImage || "",
+                heroBookNowLink: bundle.heroBookNowLink || "",
+                sectionHeadline: bundle.sectionHeadline || "",
+                sectionDescription: bundle.sectionDescription || "",
+                bundleCards: bundle.bundleCards || [],
+                checklistItems: bundle.checklistItems || [],
+                importantInfoHeading: bundle.importantInfoHeading || "",
+                importantInfoText: bundle.importantInfoText || "",
+              });
+              setLoading(false);
+              return;
+            }
           } catch (err) {
-            console.warn("Could not fetch boom bundle from API:", err);
+            console.warn("Could not fetch boom bundle API:", err);
           }
         }
 
-        if (realData || menuItem) {
-          const combined: HeaderSubItem = {
-            id: menuItem?._id || subItemId,
-            linkedItemId: realData?._id || menuItem?.linkedItemId || subItemId,
-            name: menuItem?.title || realData?.name || "",
-            path: menuItem?.linkUrl || realData?.path || "",
-            icon: realData?.icon || menuItem?.iconUrl || "",
-            pageType: "boom-bundle",
-            pageHeadline: realData?.pageHeadline || "",
-            pageHeroImage: realData?.pageHeroImage || "",
-            heroBookNowLink: realData?.heroBookNowLink || "",
-            sectionHeadline: realData?.sectionHeadline || "",
-            sectionDescription: realData?.sectionDescription || "",
-            bundleCards: realData?.bundleCards || [],
-            checklistItems: realData?.checklistItems || [],
-            importantInfoHeading: realData?.importantInfoHeading || "",
-            importantInfoText: realData?.importantInfoText || "",
-            isActive: realData?.isActive ?? menuItem?.isActive ?? true,
-            isHidden: !(realData?.isActive ?? menuItem?.isActive ?? true),
-          };
-
-          if (isMounted) {
-            setInitialData(combined);
-            setLoading(false);
-            return;
+        // 2. Fallback to categoriesData if API response not found
+        if (categoriesData?.categories) {
+          for (const cat of categoriesData.categories) {
+            const item = cat.subItems.find((s) => s.id === subItemId);
+            if (item && isMounted) {
+              setInitialData(item);
+              setLoading(false);
+              return;
+            }
           }
-        }
-
-        // Fallback to categoriesData
-        const category = categoriesData?.categories?.find(
-          (c) => c.id === categoryId,
-        );
-        const subItem = category?.subItems?.find((s) => s.id === subItemId);
-        if (subItem && isMounted) {
-          setInitialData(subItem);
         }
       }
 
-      if (isMounted) setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
     };
 
     loadData();
+
     return () => {
       isMounted = false;
     };
   }, [
-    subItemId,
     categoryId,
+    subItemId,
     menuItemResponse,
     isMenuItemLoading,
     categoriesData,
   ]);
 
   const handleSave = async (subItemData: Partial<HeaderSubItem>) => {
-    setLoading(true);
+    setIsSaving(true);
+    setErrorMessage(null);
 
     const pagePayload: BoomBundlePayload = {
       name: subItemData.name || "",
       path: subItemData.path || "",
       icon: subItemData.icon || "",
       pageHeadline: subItemData.pageHeadline || "",
+      heroHighlight: subItemData.heroHighlight || "",
+      heroSubtitle: subItemData.heroSubtitle || "",
       pageHeroImage: subItemData.pageHeroImage || "",
       heroBookNowLink: subItemData.heroBookNowLink || "",
       sectionHeadline: subItemData.sectionHeadline || "",
@@ -167,18 +175,32 @@ const BoomBundleFormPage: React.FC = () => {
           isActive: subItemData.isActive ?? true,
         });
       }
-    } catch (error) {
+
+      await queryClient.invalidateQueries({ queryKey: ["header-categories"] });
+      await queryClient.invalidateQueries({ queryKey: ["menu-item"] });
+
+      setShowSuccessModal(true);
+    } catch (error: unknown) {
       console.error("Error saving Boom Bundle API:", error);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiErr = error as any;
+      const msg =
+        apiErr?.response?.data?.message ||
+        apiErr?.message ||
+        "Failed to save boom bundle. Please check the fields and try again.";
+      setErrorMessage(msg);
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    await queryClient.invalidateQueries({ queryKey: ["header-categories"] });
-    await queryClient.invalidateQueries({ queryKey: ["menu-item"] });
-
-    navigate("/manage-header");
+  const handleSuccessRedirect = () => {
+    setShowSuccessModal(false);
+    navigate(categoryId ? `/manage-header?tab=${categoryId}` : "/manage-header");
   };
 
   const handleClose = () => {
-    navigate("/manage-header");
+    navigate(categoryId ? `/manage-header?tab=${categoryId}` : "/manage-header");
   };
 
   if (loading) {
@@ -210,13 +232,42 @@ const BoomBundleFormPage: React.FC = () => {
         </h1>
       </div>
 
+      {errorMessage && (
+        <div className="mb-6 p-4 bg-red-900/40 border border-red-500/60 rounded-xl text-red-200 text-sm flex items-center justify-between max-w-4xl mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-base">⚠️</span>
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            className="text-red-300 hover:text-white text-xs underline ml-4 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="bg-[#1C1C1C] rounded-xl border border-[#3A3530] w-full max-w-4xl overflow-hidden mx-auto">
         <BoomBundleForm
           initialData={initialData}
           onClose={handleClose}
           onSave={handleSave}
+          isSaving={isSaving}
         />
       </div>
+
+      <SuccessModal
+        isOpen={showSuccessModal}
+        title={
+          subItemId && subItemId !== "new"
+            ? "Boom Bundle Updated!"
+            : "Boom Bundle Created!"
+        }
+        message="Boom Bundle details have been saved successfully."
+        buttonText="OK"
+        onConfirm={handleSuccessRedirect}
+      />
     </div>
   );
 };

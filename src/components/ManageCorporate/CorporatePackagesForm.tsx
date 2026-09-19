@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import type { CorporatePackageItem } from './types';
 import PackageEditModal from './PackageEditModal';
 import { EditIcon, TrashIcon } from '@/assets/icons';
+import GameplayIcon from '@/assets/corporate/Game-play-40x40px.png';
+import CocktailsIcon from '@/assets/corporate/Cocktails_40x40px.png';
+import BevvysIcon from '@/assets/corporate/Bevvys_40x40px.png';
+import BurgerIcon from '@/assets/corporate/Burger_40x40px.png';
+import ShotsIcon from '@/assets/corporate/Shots_40x40px.png';
+import MoneyIcon from '@/assets/corporate/Money_40x40px.png';
 
 interface CorporatePackagesFormProps {
   initialData: {
@@ -17,12 +23,14 @@ interface CorporatePackagesFormProps {
     budgetText: string;
   }) => void;
   isSaving?: boolean;
+  errorMessage?: string | null;
 }
 
 const CorporatePackagesForm: React.FC<CorporatePackagesFormProps> = ({
   initialData,
   onSave,
   isSaving = false,
+  errorMessage,
 }) => {
   const [packagesTitle, setPackagesTitle] = useState(initialData.packagesTitle);
   const [packagesDescription, setPackagesDescription] = useState(initialData.packagesDescription);
@@ -127,109 +135,219 @@ const CorporatePackagesForm: React.FC<CorporatePackagesFormProps> = ({
           </div>
         </div>
 
-        {/* Packages Cards List */}
+        {/* Packages Comparison Matrix / Cards */}
         <div>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
-              <h3 className="text-base font-semibold text-white">Packages ({packages.length})</h3>
-              <p className="text-xs text-gray-400">Available corporate booking tiers</p>
+              <h3 className="text-base font-semibold text-white">Packages Comparison Matrix ({packages.length})</h3>
+              <p className="text-xs text-gray-400">
+                Manage packages columns and perks rows (Games, Welcome Bevvy, Bevvies, Scran, Something Fun, Price).
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={handleOpenAddModal}
-              className="bg-[#E1017D] hover:bg-[#c2016c] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5"
-            >
-              + Add Package
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleOpenAddModal}
+                className="bg-[#E1017D] hover:bg-[#c2016c] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                + Add Package Column
+              </button>
+            </div>
           </div>
 
           {packages.length === 0 ? (
             <div className="p-8 text-center border-2 border-dashed border-[#3A3530] rounded-xl bg-[#141414]">
               <p className="text-gray-400 text-sm mb-3">No corporate packages added yet.</p>
-              <button
-                type="button"
-                onClick={handleOpenAddModal}
-                className="bg-[#2A2A2A] hover:bg-[#3A3530] text-white px-4 py-2 rounded-lg text-sm border border-[#3A3530] transition-colors"
-              >
-                Create Your First Package
-              </button>
+              <div className="flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleOpenAddModal}
+                  className="bg-[#2A2A2A] hover:bg-[#3A3530] text-white px-4 py-2 rounded-lg text-sm border border-[#3A3530] transition-colors cursor-pointer"
+                >
+                  Create Package
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {packages.map((pkg, idx) => (
-                <div
-                  key={idx}
-                  className="bg-[#141414] border border-[#3A3530] hover:border-[#4A4540] rounded-xl p-5 flex flex-col justify-between transition-all"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-3">
-                        {pkg.iconUrl ? (
+            <div className="space-y-6">
+              {/* Matrix Table View Matching Image */}
+              <div className="overflow-x-auto rounded-xl border border-[#3A3530] bg-[#101010] shadow-xl">
+                <table className="w-full text-left border-collapse min-w-190">
+                  <thead>
+                    <tr className="border-b border-[#3A3530] bg-[#181818]">
+                      {/* Left Header - Row Label Column */}
+                      <th className="w-45 p-4 text-xs font-black uppercase tracking-wider text-gray-400 border-r border-[#3A3530]">
+                        Features & Perks
+                      </th>
+                      {/* Column for each package */}
+                      {packages.map((pkg, idx) => (
+                        <th
+                          key={idx}
+                          className="p-4 text-center border-r last:border-r-0 border-[#3A3530] min-w-50"
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="font-extrabold text-sm uppercase text-white tracking-wider">
+                              {pkg.title || `Package ${idx + 1}`}
+                            </span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditModal(idx)}
+                                className="px-2 py-0.5 text-xs rounded bg-[#2A2A2A] hover:bg-[#3A3530] text-[#E1017D] hover:text-white border border-[#3A3530] transition-colors flex items-center gap-1"
+                                title="Edit Package"
+                              >
+                                <EditIcon size={12} color="currentColor" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePackage(idx)}
+                                className="p-1 rounded text-gray-400 hover:text-red-400 hover:bg-[#2A2A2A] transition-colors"
+                                title="Delete Package"
+                              >
+                                <TrashIcon size={13} color="currentColor" />
+                              </button>
+                            </div>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#2A2A2A]">
+                    {/* Row 1: GAMES */}
+                    <tr className="hover:bg-[#161616] transition-colors">
+                      <td className="p-3.5 bg-[#E1017D] text-white font-black text-xs uppercase tracking-wider border-r border-[#3A3530]">
+                        <div className="flex items-center gap-2.5">
                           <img
-                            src={pkg.iconUrl}
-                            alt=""
-                            className="w-10 h-10 object-contain rounded-lg bg-[#222] p-1 border border-[#3A3530]"
+                            src={GameplayIcon}
+                            alt="Games"
+                            className="w-6 h-6 object-contain shrink-0"
                           />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-[#222] border border-[#3A3530] flex items-center justify-center text-xs font-bold text-[#E1017D]">
-                            #{idx + 1}
-                          </div>
-                        )}
-                        <div>
-                          <h4 className="font-bold text-white text-base leading-tight">
-                            {pkg.title || 'Untitled'}
-                          </h4>
-                          <span className="text-[#E1017D] font-extrabold text-sm">
-                            {pkg.price || 'Contact for price'}
-                          </span>
+                          <span>GAMES</span>
                         </div>
-                      </div>
+                      </td>
+                      {packages.map((pkg, idx) => (
+                        <td
+                          key={idx}
+                          className="p-3.5 text-center text-xs font-bold text-gray-200 uppercase border-r last:border-r-0 border-[#2A2A2A]"
+                        >
+                          {pkg.games || '—'}
+                        </td>
+                      ))}
+                    </tr>
 
-                      {/* Card Edit Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditModal(idx)}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#2A2A2A] hover:bg-[#3A3530] text-[#E1017D] hover:text-white border border-[#3A3530] transition-colors"
-                        title="Edit package"
-                      >
-                        <EditIcon size={14} color="currentColor" />
-                        <span>Edit</span>
-                      </button>
-                    </div>
+                    {/* Row 2: WELCOME BEVVY */}
+                    <tr className="hover:bg-[#161616] transition-colors">
+                      <td className="p-3.5 bg-[#E1017D] text-white font-black text-xs uppercase tracking-wider border-r border-[#3A3530]">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={CocktailsIcon}
+                            alt="Welcome Bevvy"
+                            className="w-6 h-6 object-contain shrink-0"
+                          />
+                          <span>WELCOME BEVVY</span>
+                        </div>
+                      </td>
+                      {packages.map((pkg, idx) => (
+                        <td
+                          key={idx}
+                          className="p-3.5 text-center text-xs font-bold text-gray-200 uppercase border-r last:border-r-0 border-[#2A2A2A]"
+                        >
+                          {pkg.welcomeBevvy || '—'}
+                        </td>
+                      ))}
+                    </tr>
 
-                    {/* Features list */}
-                    {pkg.details && pkg.details.length > 0 && (
-                      <div className="mt-3 space-y-1.5 border-t border-[#2A2A2A] pt-3">
-                        {pkg.details.map((detail, dIdx) => (
-                          <div key={dIdx} className="flex items-start gap-2 text-xs text-gray-300">
-                            <span className="text-[#E1017D] font-bold">•</span>
-                            <span>{detail}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                    {/* Row 3: BEVVIES */}
+                    <tr className="hover:bg-[#161616] transition-colors">
+                      <td className="p-3.5 bg-[#E1017D] text-white font-black text-xs uppercase tracking-wider border-r border-[#3A3530]">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={BevvysIcon}
+                            alt="Bevvies"
+                            className="w-6 h-6 object-contain shrink-0"
+                          />
+                          <span>BEVVIES</span>
+                        </div>
+                      </td>
+                      {packages.map((pkg, idx) => (
+                        <td
+                          key={idx}
+                          className="p-3.5 text-center text-xs font-bold text-gray-200 uppercase border-r last:border-r-0 border-[#2A2A2A]"
+                        >
+                          {pkg.bevvies || '—'}
+                        </td>
+                      ))}
+                    </tr>
 
-                  <div className="mt-4 pt-3 border-t border-[#2A2A2A] flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditModal(idx)}
-                      className="flex-1 py-2 px-3 bg-[#E1017D]/10 hover:bg-[#E1017D] text-[#E1017D] hover:text-white border border-[#E1017D]/30 hover:border-[#E1017D] rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <EditIcon size={14} color="currentColor" />
-                      <span>Edit Package</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePackage(idx)}
-                      className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#2A2A2A] rounded-lg transition-colors border border-transparent hover:border-[#3A3530]"
-                      title="Delete package"
-                    >
-                      <TrashIcon size={16} color="currentColor" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                    {/* Row 4: SCRAN */}
+                    <tr className="hover:bg-[#161616] transition-colors">
+                      <td className="p-3.5 bg-[#E1017D] text-white font-black text-xs uppercase tracking-wider border-r border-[#3A3530]">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={BurgerIcon}
+                            alt="Scran"
+                            className="w-6 h-6 object-contain shrink-0"
+                          />
+                          <span>SCRAN</span>
+                        </div>
+                      </td>
+                      {packages.map((pkg, idx) => (
+                        <td
+                          key={idx}
+                          className="p-3.5 text-center text-xs font-bold text-gray-200 uppercase border-r last:border-r-0 border-[#2A2A2A]"
+                        >
+                          {pkg.scran || '—'}
+                        </td>
+                      ))}
+                    </tr>
+
+                    {/* Row 5: SOMETHING FUN */}
+                    <tr className="hover:bg-[#161616] transition-colors">
+                      <td className="p-3.5 bg-[#E1017D] text-white font-black text-xs uppercase tracking-wider border-r border-[#3A3530]">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={ShotsIcon}
+                            alt="Something Fun"
+                            className="w-6 h-6 object-contain shrink-0"
+                          />
+                          <span>SOMETHING FUN</span>
+                        </div>
+                      </td>
+                      {packages.map((pkg, idx) => (
+                        <td
+                          key={idx}
+                          className="p-3.5 text-center text-xs font-bold text-gray-200 uppercase border-r last:border-r-0 border-[#2A2A2A]"
+                        >
+                          {pkg.somethingFun || '—'}
+                        </td>
+                      ))}
+                    </tr>
+
+                    {/* Row 6: PRICE £ PP */}
+                    <tr className="hover:bg-[#161616] transition-colors">
+                      <td className="p-3.5 bg-[#E1017D] text-white font-black text-xs uppercase tracking-wider border-r border-[#3A3530]">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={MoneyIcon}
+                            alt="Price"
+                            className="w-6 h-6 object-contain shrink-0"
+                          />
+                          <span>PRICE £ PP</span>
+                        </div>
+                      </td>
+                      {packages.map((pkg, idx) => (
+                        <td
+                          key={idx}
+                          className="p-3.5 text-center text-sm font-extrabold text-white uppercase border-r last:border-r-0 border-[#2A2A2A]"
+                        >
+                          {pkg.price || '—'}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -249,16 +367,21 @@ const CorporatePackagesForm: React.FC<CorporatePackagesFormProps> = ({
         </div>
       </div>
 
-      <div className="mt-8 pt-6 border-t border-[#3A3530] flex justify-end">
+      <div className="mt-8 pt-6 border-t border-[#3A3530] flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+        {errorMessage && (
+          <div className="text-red-400 text-sm font-medium bg-red-500/10 border border-red-500/20 px-3.5 py-2 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
         <button
           type="submit"
           disabled={isSaving}
-          className="bg-[#E1017D] hover:bg-[#c2016c] text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+          className="bg-[#E1017D] hover:bg-[#c2016c] text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
         >
           {isSaving && (
             <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
           )}
-          Save Corporate Packages
+          {isSaving ? 'Saving...' : 'Save Corporate Packages'}
         </button>
       </div>
 
