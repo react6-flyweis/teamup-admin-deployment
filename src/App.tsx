@@ -14,6 +14,7 @@ import BoomBundleFormPage from "@/pages/ManageHeader/BoomBundleFormPage";
 import QueensNightFormPage from "@/pages/ManageHeader/QueensNightFormPage";
 import Games from "@/pages/Games";
 import Bites from "@/pages/Bites";
+import FoodAndDrinks from "@/pages/FoodAndDrinks";
 import Bookings from "@/pages/Bookings";
 import Payments from "@/pages/Payments";
 import Promotions from "@/pages/Promotions";
@@ -162,6 +163,22 @@ function App() {
             />
             <Route
               path="food-drinks"
+              element={
+                <PermissionGuard tabId="bites_drinks">
+                  <FoodAndDrinks />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="food-drinks/menu"
+              element={
+                <PermissionGuard tabId="bites_drinks">
+                  <Bites />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="bites"
               element={
                 <PermissionGuard tabId="bites_drinks">
                   <Bites />

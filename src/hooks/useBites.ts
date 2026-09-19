@@ -76,9 +76,17 @@ export interface DrinksSection {
   backgroundImage: string;
 }
 
+export interface MenuImagesSection {
+  cocktails: string;
+  beer: string;
+  flatbreads: string;
+  appetizers: string;
+}
+
 export interface FoodDrinksData {
   foodCombos?: FoodCombosSection;
   drinksSection?: DrinksSection;
+  menuImages?: MenuImagesSection;
   [key: string]: unknown;
 }
 
