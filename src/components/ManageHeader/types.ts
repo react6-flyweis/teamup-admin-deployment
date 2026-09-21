@@ -132,8 +132,11 @@ export interface HeaderCategory {
   id: string;
   _id?: string;
   name: string;
+  link?: string;
+  path?: string;
   isHidden: boolean;
   isActive?: boolean;
+  order?: number;
   subItems: HeaderSubItem[];
 }
 

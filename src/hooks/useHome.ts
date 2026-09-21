@@ -150,6 +150,8 @@ export interface HomeData {
   signUp?: NewsletterSectionData;
   corporates?: CorporatesData;
   mainBg?: string;
+  socialEvents?: import('@/types/events').EventPageData;
+  corporateEvents?: import('@/types/events').EventPageData;
 }
 
 export interface HomeContent {

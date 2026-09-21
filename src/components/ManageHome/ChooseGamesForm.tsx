@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useHomeQuery, useUpdateHomeMutation, type ChooseGameSectionData, type ChooseGameItem } from '@/hooks/useHome';
 import { EditIcon, TrashIcon, EyeIcon, HideEyeIcon, CloseIcon } from '@/assets/icons';
 import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
+import { isVideoUrl, resolvePreviewUrl } from '@/utils/mediaUtils';
 
 interface ChooseGamesFormProps {
   initialData?: ChooseGameSectionData;
@@ -188,19 +189,38 @@ const ChooseGamesForm: React.FC<ChooseGamesFormProps> = ({
             }`}
           >
             <div className="relative aspect-square w-full mb-3 rounded overflow-hidden bg-gray-800">
-              <img
-                src={item.imageUrl}
-                alt={item.title}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://via.placeholder.com/400x250?text=No+Image';
-                }}
-              />
-              <span className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded font-mono">
-                #{item.order}
-              </span>
+              {isVideoUrl(item.imageUrl) ? (
+                <video
+                  src={resolvePreviewUrl(item.imageUrl)}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={resolvePreviewUrl(item.imageUrl)}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://via.placeholder.com/400x250?text=No+Image';
+                  }}
+                />
+              )}
+              <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
+                <span className="bg-black/70 text-white text-xs px-2 py-0.5 rounded font-mono">
+                  #{item.order}
+                </span>
+                {isVideoUrl(item.imageUrl) && (
+                  <span className="bg-black/70 text-[#E1017D] text-[11px] px-1.5 py-0.5 rounded font-medium flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#E1017D] animate-pulse"></span>
+                    Video
+                  </span>
+                )}
+              </div>
               <span
-                className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded font-medium ${
+                className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded font-medium z-10 ${
                   item.isActive ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
                 }`}
               >
@@ -309,11 +329,14 @@ const ChooseGamesForm: React.FC<ChooseGamesFormProps> = ({
               </div>
 
               <ImageInputWithUpload
-                label="Game Image"
-                hint="1:1 Square • Rec: 800×800 px"
+                label="Game Media (Image or Video)"
+                hint="1:1 Square • Rec: 800×800 px • Image or Video"
                 value={formData.imageUrl}
                 onChange={(url) => setFormData({ ...formData, imageUrl: url })}
-                placeholder="/uploads/indoor-mini-golf.jpg or https://..."
+                placeholder="/uploads/indoor-mini-golf.jpg, .mp4 or https://..."
+                accept="image/*,video/*"
+                aspectRatio="1:1"
+                buttonText="Upload Media"
                 inputClassName="w-full bg-[#2A2A2A] border border-[#3A3530] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#E1017D]"
                 labelClassName="block text-sm font-medium text-gray-300 mb-1"
               />

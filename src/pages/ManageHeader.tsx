@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { HeaderCategory, HeaderSubItem } from '@/components/ManageHeader/types';
 import { useHeaderCategoriesQuery, useUpdateCategoryMutation, useDeleteCategoryMutation } from '@/hooks/useHeaderCategories';
 import { useLocationsQuery } from '@/hooks/useLocations';
-import { EditIcon, TrashIcon } from '@/assets/icons';
+import { EditIcon, TrashIcon, ChevronDownIcon } from '@/assets/icons';
 import SubItemList from '@/components/ManageHeader/SubItemList';
 import AddLocationModal from '@/components/ManageHeader/AddLocationModal';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -23,6 +23,7 @@ const ManageHeader: React.FC = () => {
   const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [updatingCategoryIds, setUpdatingCategoryIds] = useState<Record<string, boolean>>({});
+  const [isReordering, setIsReordering] = useState(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -31,12 +32,15 @@ const ManageHeader: React.FC = () => {
     if (categoriesData?.categories) {
       const rawCats = Array.isArray(categoriesData.categories) ? categoriesData.categories : [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cats: HeaderCategory[] = rawCats.map((cat: any) => {
+      const cats: HeaderCategory[] = rawCats.map((cat: any, index: number) => {
         const isCatActive = cat.isActive !== undefined ? Boolean(cat.isActive) : !cat.isHidden;
         return {
           ...cat,
           id: cat.id || cat._id,
           name: cat.name,
+          link: cat.link || cat.path || '',
+          path: cat.path || cat.link || '',
+          order: typeof cat.order === 'number' ? cat.order : index + 1,
           isActive: isCatActive,
           isHidden: !isCatActive,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,6 +56,9 @@ const ManageHeader: React.FC = () => {
           }),
         };
       });
+
+      // Sort categories by order if present
+      cats.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       setCategories(cats);
 
       if (cats.length > 0) {
@@ -77,6 +84,45 @@ const ManageHeader: React.FC = () => {
   const handleSelectCategory = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
     setSearchParams({ tab: categoryId });
+  };
+
+  const handleMoveCategory = async (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= categories.length || isReordering) return;
+
+    const previousCategories = [...categories];
+    const updated = [...categories];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+
+    const reordered = updated.map((cat, idx) => ({
+      ...cat,
+      order: idx + 1,
+    }));
+
+    setCategories(reordered);
+    setIsReordering(true);
+    setErrorMessage(null);
+
+    try {
+      // Use categories update API for reordered positions
+      await Promise.all(
+        reordered.map((cat) =>
+          updateCategory.mutateAsync({
+            categoryId: cat.id,
+            name: cat.name,
+            order: cat.order,
+          })
+        )
+      );
+    } catch (err) {
+      console.error('Error updating category order:', err);
+      setCategories(previousCategories);
+      setErrorMessage('Failed to update category order. Changes have been reverted.');
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+    } finally {
+      setIsReordering(false);
+    }
   };
 
   useEffect(() => {
@@ -210,11 +256,11 @@ const ManageHeader: React.FC = () => {
       )}
 
       {/* Live Preview Section */}
-      <div className="mb-8 border border-[#3A3530] rounded-xl overflow-hidden shadow-2xl">
-        <div className="bg-black relative" style={{ backgroundImage: 'radial-gradient(circle at center, #1a1a1a 0%, #050505 100%)' }}>
+      <div className="mb-8 border border-[#3A3530] rounded-xl shadow-2xl relative z-20">
+        <div className="bg-black relative rounded-xl overflow-visible" style={{ backgroundImage: 'radial-gradient(circle at center, #1a1a1a 0%, #050505 100%)' }}>
           <div className="flex items-center justify-between px-6 py-4">
             {/* Logo */}
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <img src={TeamUpLogo} alt="Team Up" className="h-10 object-contain" />
             </div>
 
@@ -272,7 +318,7 @@ const ManageHeader: React.FC = () => {
             </div>
           </div>
           {/* Banner */}
-          <div className="bg-[#E1017D] w-full py-2.5 text-center text-white font-black uppercase text-sm tracking-widest shadow-md">
+          <div className="bg-[#E1017D] w-full py-2.5 text-center text-white font-black uppercase text-sm tracking-widest shadow-md rounded-b-xl">
             TIPSY THRILLS - SIPS & THRILLS FRI 15TH AUG
           </div>
         </div>
@@ -282,7 +328,7 @@ const ManageHeader: React.FC = () => {
       <div className="flex gap-6 min-h-[calc(100vh-140px)]">
 
         {/* ── LEFT MINI SIDEBAR ── */}
-        <div className="w-64 flex-shrink-0 flex flex-col gap-6 h-full">
+        <div className="w-64 shrink-0 flex flex-col gap-6 h-full">
           {/* CATEGORIES */}
           <div className="bg-[#1C1C1C] rounded-xl border border-[#3A3530] flex flex-col overflow-hidden flex-1">
             <div className="p-4 border-b border-[#3A3530] flex items-center justify-between">
@@ -296,22 +342,55 @@ const ManageHeader: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {categories.map((category) => (
+              {categories.map((category, index) => (
                 <div
                   key={category.id}
                   onClick={() => handleSelectCategory(category.id)}
-                  className={`group flex items-center justify-between px-4 py-3 cursor-pointer border-b border-[#2A2A2A] transition-all duration-200 ${selectedCategoryId === category.id
+                  className={`group flex items-center justify-between px-3 py-3 cursor-pointer border-b border-[#2A2A2A] transition-all duration-200 ${selectedCategoryId === category.id
                       ? 'bg-[#2C2C2C] border-l-2 border-l-[#E1017D]'
                       : 'hover:bg-[#252525] border-l-2 border-l-transparent'
                     }`}
                 >
+                  {/* Reorder Arrows */}
+                  <div
+                    className="flex flex-col items-center mr-2 flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      disabled={index === 0 || isReordering}
+                      onClick={() => handleMoveCategory(index, 'up')}
+                      className="text-gray-400 hover:text-white p-0.5 disabled:opacity-20 disabled:hover:text-gray-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      title="Move Up"
+                    >
+                      <ChevronDownIcon size={12} className="rotate-180" color="currentColor" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === categories.length - 1 || isReordering}
+                      onClick={() => handleMoveCategory(index, 'down')}
+                      className="text-gray-400 hover:text-white p-0.5 disabled:opacity-20 disabled:hover:text-gray-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      title="Move Down"
+                    >
+                      <ChevronDownIcon size={12} color="currentColor" />
+                    </button>
+                  </div>
+
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-medium truncate ${category.isHidden ? 'text-gray-500 line-through' :
                         selectedCategoryId === category.id ? 'text-white' : 'text-gray-300'
                       }`}>
                       {category.name}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">{category.subItems.length} items</p>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
+                      <span>{category.subItems.length} items</span>
+                      {category.link && (
+                        <>
+                          <span>•</span>
+                          <span className="text-[#00B4D8] truncate max-w-20" title={category.link}>{category.link}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   {/* Actions (show on hover or selected) */}
@@ -383,7 +462,13 @@ const ManageHeader: React.FC = () => {
               <div className="px-6 py-4 border-b border-[#3A3530] flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-white">{selectedCategory.name}</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Manage sub-items and their page content</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {selectedCategory.link ? (
+                      <span>Direct link: <span className="text-[#00B4D8]">{selectedCategory.link}</span></span>
+                    ) : (
+                      'Manage sub-items and their page content'
+                    )}
+                  </p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${selectedCategory.isHidden
                     ? 'bg-red-900/30 text-red-400'

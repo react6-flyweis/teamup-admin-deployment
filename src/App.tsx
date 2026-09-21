@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Layout from "@/components/Layout";
 import Register from "@/pages/Register";
 import ManageHome from "@/pages/ManageHome";
-import ManageCorporate from "@/pages/ManageCorporate";
+import ManageSocialEvents from "@/pages/ManageSocialEvents";
+import ManageCorporateEvents from "@/pages/ManageCorporateEvents";
 import ManageHeader from "@/pages/ManageHeader";
 import ManageFooter from "@/pages/ManageFooter";
 import CategoryFormPage from "@/pages/ManageHeader/CategoryFormPage";
@@ -144,15 +145,33 @@ function App() {
               }
             />
             <Route
-              path="manage-corporate"
+              path="social-events"
               element={
                 <PermissionGuard tabId="manage_home">
-                  <ManageCorporate />
+                  <ManageSocialEvents />
                 </PermissionGuard>
               }
             />
-            <Route path="corporates" element={<Navigate to="/manage-corporate" replace />} />
-            <Route path="corporate" element={<Navigate to="/manage-corporate" replace />} />
+            <Route path="manage-social-events" element={<Navigate to="/social-events" replace />} />
+            <Route
+              path="corporate-events"
+              element={
+                <PermissionGuard tabId="manage_home">
+                  <ManageCorporateEvents />
+                </PermissionGuard>
+              }
+            />
+            <Route path="manage-corporate-events" element={<Navigate to="/corporate-events" replace />} />
+            <Route
+              path="manage-corporate"
+              element={
+                <PermissionGuard tabId="manage_home">
+                  <ManageCorporateEvents />
+                </PermissionGuard>
+              }
+            />
+            <Route path="corporates" element={<Navigate to="/corporate-events" replace />} />
+            <Route path="corporate" element={<Navigate to="/corporate-events" replace />} />
             <Route
               path="game-venue"
               element={

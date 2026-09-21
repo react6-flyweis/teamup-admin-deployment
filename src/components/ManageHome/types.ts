@@ -33,6 +33,7 @@ export interface OperatingHours {
 export interface LocationInfo {
   address: string;
   mapEmbedUrl: string;
+  mapImageUrl?: string;
   mapImage?: string;
   hours: OperatingHours[];
 }
