@@ -10,6 +10,7 @@ const CategoryFormPage: React.FC = () => {
   const fromTab = searchParams.get('tab');
   const navigate = useNavigate();
   const [name, setName] = useState('');
+  const [link, setLink] = useState('');
   const { data: categoriesData } = useHeaderCategoriesQuery();
   const createCategory = useCreateCategoryMutation();
   const updateCategory = useUpdateCategoryMutation();
@@ -22,7 +23,8 @@ const CategoryFormPage: React.FC = () => {
     if (categoryId && categoryId !== 'new' && categoriesData?.categories) {
       const category = categoriesData.categories.find(c => c.id === categoryId);
       if (category) {
-        setName(category.name);
+        setName(category.name || '');
+        setLink(category.link || category.path || '');
       }
     }
   }, [categoryId, categoriesData]);
@@ -46,10 +48,17 @@ const CategoryFormPage: React.FC = () => {
 
     try {
       if (categoryId && categoryId !== 'new') {
-        await updateCategory.mutateAsync({ categoryId, name: name.trim() });
+        await updateCategory.mutateAsync({
+          categoryId,
+          name: name.trim(),
+          link: link.trim(),
+        });
         setSavedCategoryId(categoryId);
       } else {
-        const res = await createCategory.mutateAsync(name.trim());
+        const res = await createCategory.mutateAsync({
+          name: name.trim(),
+          link: link.trim(),
+        });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const apiRes = res as any;
         const newCatId = apiRes?.category?.id || apiRes?.category?._id || apiRes?.data?.id || apiRes?.data?._id || apiRes?.id || apiRes?._id;
@@ -101,7 +110,7 @@ const CategoryFormPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-6">
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Category Name
+              Category Name <span className="text-[#FB3748]">*</span>
             </label>
             <input
               type="text"
@@ -111,6 +120,22 @@ const CategoryFormPage: React.FC = () => {
               className="w-full bg-[#2A2A2A] border border-[#3A3530] rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-[#FB3748] transition-colors"
               autoFocus
             />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Link / URL <span className="text-xs text-gray-500 font-normal">(Optional direct link, e.g. /games or https://...)</span>
+            </label>
+            <input
+              type="text"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="e.g. /games or /book-now"
+              className="w-full bg-[#2A2A2A] border border-[#3A3530] rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-[#FB3748] transition-colors"
+            />
+            <p className="text-xs text-gray-500 mt-1.5">
+              Specify a direct link if this category should navigate directly to a page.
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[#3A3530]">
