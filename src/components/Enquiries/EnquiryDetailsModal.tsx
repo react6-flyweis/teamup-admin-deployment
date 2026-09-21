@@ -31,6 +31,27 @@ export const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
 
   const fullName = `${enquiry.firstName || ''} ${enquiry.lastName || ''}`.trim() || 'N/A';
 
+  const isEvent =
+    enquiry.enquiryType?.toLowerCase() === 'event' ||
+    Boolean(enquiry.eventType || enquiry.eventDate);
+
+  const formatEventDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    try {
+      const d = new Date(dateString);
+      return isNaN(d.getTime())
+        ? dateString
+        : d.toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          });
+    } catch {
+      return dateString;
+    }
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     try {
@@ -112,7 +133,13 @@ export const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-3 bg-[#262122] p-4 rounded-xl border border-[#3A3530]">
             <div className="flex items-center gap-2">
               <span className="text-xs font-montserrat text-gray-400">Enquiry Type:</span>
-              <span className="px-3 py-1 bg-[#E1017D]/20 text-[#E1017D] border border-[#E1017D]/30 rounded-full text-xs font-semibold font-poppins">
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-semibold font-poppins border ${
+                  isEvent
+                    ? 'bg-purple-900/40 text-purple-300 border-purple-500/50'
+                    : 'bg-[#E1017D]/20 text-[#E1017D] border-[#E1017D]/30'
+                }`}
+              >
                 {enquiry.enquiryType || 'General'}
               </span>
             </div>
@@ -135,6 +162,79 @@ export const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
             </div>
           </div>
 
+          {/* Conditional Event Details Card */}
+          {isEvent && (
+            <div className="bg-[#241F20] rounded-xl p-5 border border-purple-500/30 shadow-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold">
+                  ★
+                </span>
+                <h3 className="text-sm font-semibold font-poppins text-purple-300">
+                  Event Details
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm font-montserrat">
+                <div>
+                  <span className="text-xs text-gray-400 uppercase font-semibold block mb-1">
+                    Event Location / Venue
+                  </span>
+                  <span className="font-semibold text-white">
+                    {enquiry.eventLocation || enquiry.location || '-'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-xs text-gray-400 uppercase font-semibold block mb-1">
+                    Event Date
+                  </span>
+                  <span className="font-semibold text-white">
+                    {formatEventDate(enquiry.eventDate)}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-xs text-gray-400 uppercase font-semibold block mb-1">
+                    Start Time
+                  </span>
+                  <span className="font-semibold text-white">
+                    {enquiry.startTime || '-'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-xs text-gray-400 uppercase font-semibold block mb-1">
+                    Type of Event
+                  </span>
+                  <span className="font-semibold text-white">
+                    {enquiry.eventType || '-'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-xs text-gray-400 uppercase font-semibold block mb-1">
+                    Number of Guests
+                  </span>
+                  <span className="font-semibold text-white">
+                    {enquiry.guests || '-'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Special Request */}
+              {enquiry.specialRequest && (
+                <div className="pt-3 border-t border-[#3A3530]">
+                  <span className="text-xs text-gray-400 uppercase font-semibold block mb-1">
+                    How can we make this extra special?
+                  </span>
+                  <div className="bg-[#181415] rounded-lg p-3 border border-[#332D2E] text-gray-200 text-sm whitespace-pre-wrap">
+                    {enquiry.specialRequest}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Customer Information Card */}
           <div className="bg-[#241F20] rounded-xl p-5 border border-[#332D2E]">
             <h3 className="text-sm font-semibold font-poppins text-[#A3EBFF] mb-4 flex items-center gap-2">
@@ -151,10 +251,12 @@ export const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
                 <span className="font-semibold text-white">{fullName}</span>
               </div>
 
-              <div>
-                <span className="text-xs text-gray-400 block mb-1">Location / Venue</span>
-                <span className="font-semibold text-white">{enquiry.location || 'Not specified'}</span>
-              </div>
+              {!isEvent && (
+                <div>
+                  <span className="text-xs text-gray-400 block mb-1">Location / Venue</span>
+                  <span className="font-semibold text-white">{enquiry.location || 'Not specified'}</span>
+                </div>
+              )}
 
               <div>
                 <span className="text-xs text-gray-400 block mb-1">Email Address</span>
@@ -199,10 +301,12 @@ export const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <span className="text-xs text-gray-400 block mb-1">Date of Birth</span>
-                <span className="font-medium text-gray-200">{formatDOB(enquiry.dateOfBirth)}</span>
-              </div>
+              {enquiry.dateOfBirth && (
+                <div>
+                  <span className="text-xs text-gray-400 block mb-1">Date of Birth</span>
+                  <span className="font-medium text-gray-200">{formatDOB(enquiry.dateOfBirth)}</span>
+                </div>
+              )}
 
               <div>
                 <span className="text-xs text-gray-400 block mb-1">Source</span>
@@ -211,19 +315,21 @@ export const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* Message Card */}
-          <div className="bg-[#241F20] rounded-xl p-5 border border-[#332D2E]">
-            <h3 className="text-sm font-semibold font-poppins text-[#A3EBFF] mb-3 flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              Enquiry Message
-            </h3>
+          {/* General Message / Comment Card (for non-events, or when inquiry.message/comment exists) */}
+          {(!isEvent || (enquiry.message && enquiry.message !== enquiry.specialRequest) || (enquiry.comment && enquiry.comment !== enquiry.specialRequest)) && (
+            <div className="bg-[#241F20] rounded-xl p-5 border border-[#332D2E]">
+              <h3 className="text-sm font-semibold font-poppins text-[#A3EBFF] mb-3 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                {isEvent ? 'Additional Notes / Message' : 'Enquiry Message / Comment'}
+              </h3>
 
-            <div className="bg-[#181415] rounded-lg p-4 border border-[#332D2E] text-gray-200 text-sm leading-relaxed whitespace-pre-wrap min-h-[100px]">
-              {enquiry.message || 'No message provided.'}
+              <div className="bg-[#181415] rounded-lg p-4 border border-[#332D2E] text-gray-200 text-sm leading-relaxed whitespace-pre-wrap min-h-[80px]">
+                {enquiry.message || enquiry.comment || 'No message provided.'}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Timeline & Metadata */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-montserrat text-gray-400">
