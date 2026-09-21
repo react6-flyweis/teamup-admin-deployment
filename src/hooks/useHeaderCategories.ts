@@ -19,8 +19,17 @@ export const useHeaderCategoriesQuery = () => {
 export const useCreateCategoryMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (name: string) => {
-      const response = await apiClient.post('/menu-items/categories', { name });
+    mutationFn: async (payload: string | { name: string; link?: string; path?: string; order?: number }) => {
+      const body: Record<string, unknown> =
+        typeof payload === 'string'
+          ? { name: payload }
+          : {
+              name: payload.name,
+              ...(payload.link !== undefined && { link: payload.link, path: payload.link }),
+              ...(payload.path !== undefined && { path: payload.path, link: payload.path }),
+              ...(payload.order !== undefined && { order: payload.order }),
+            };
+      const response = await apiClient.post('/menu-items/categories', body);
       return response.data;
     },
     onSuccess: () => {
@@ -37,16 +46,30 @@ export const useUpdateCategoryMutation = () => {
       name,
       isActive,
       isHidden,
+      order,
+      link,
+      path,
     }: {
       categoryId: string;
       name?: string;
       isActive?: boolean;
       isHidden?: boolean;
+      order?: number;
+      link?: string;
+      path?: string;
     }) => {
       const payload: Record<string, unknown> = {};
       if (name !== undefined) payload.name = name;
       if (isActive !== undefined) payload.isActive = isActive;
       if (isHidden !== undefined) payload.isHidden = isHidden;
+      if (order !== undefined) payload.order = order;
+      if (link !== undefined) {
+        payload.link = link;
+        payload.path = link;
+      } else if (path !== undefined) {
+        payload.path = path;
+        payload.link = path;
+      }
 
       const response = await apiClient.patch(`/menu-items/categories/${categoryId}`, payload);
       return response.data;
