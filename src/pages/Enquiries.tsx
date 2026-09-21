@@ -272,6 +272,10 @@ const Enquiries: React.FC = () => {
                 ) : (
                   enquiries.map((item, idx) => {
                     const fullName = `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'N/A';
+                    const isEvent = item.enquiryType?.toLowerCase() === 'event' || Boolean(item.eventType || item.eventDate);
+                    const displayLocation = item.eventLocation || item.location || '-';
+                    const displayMessage = item.specialRequest || item.comment || item.message || '-';
+
                     return (
                       <tr
                         key={item._id}
@@ -290,9 +294,21 @@ const Enquiries: React.FC = () => {
 
                         {/* Enquiry Type */}
                         <td className="py-4 px-4 font-montserrat font-medium text-[13px]">
-                          <span className="px-2.5 py-1 bg-white/70 rounded-md border border-[#E9A7CE] text-[#801853] font-semibold text-xs inline-block">
-                            {item.enquiryType || 'General'}
-                          </span>
+                          {isEvent ? (
+                            <span className="px-2.5 py-1 bg-purple-100 text-purple-900 border border-purple-300 rounded-md font-semibold text-xs inline-flex items-center gap-1 shadow-sm">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+                              {item.enquiryType || 'Event'}
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-white/70 rounded-md border border-[#E9A7CE] text-[#801853] font-semibold text-xs inline-block">
+                              {item.enquiryType || 'General'}
+                            </span>
+                          )}
+                          {isEvent && item.eventType && (
+                            <div className="text-[11px] font-medium text-purple-700 mt-0.5">
+                              {item.eventType}
+                            </div>
+                          )}
                         </td>
 
                         {/* Contact Info */}
@@ -305,13 +321,20 @@ const Enquiries: React.FC = () => {
 
                         {/* Location */}
                         <td className="py-4 px-4 font-montserrat font-medium text-[13px]">
-                          {item.location || '-'}
+                          <div>{displayLocation}</div>
+                          {isEvent && (item.eventDate || item.guests) && (
+                            <div className="text-[11px] text-gray-600 font-normal mt-0.5">
+                              {item.eventDate ? formatDate(item.eventDate) : ''}
+                              {item.eventDate && item.guests ? ' • ' : ''}
+                              {item.guests ? `${item.guests} guests` : ''}
+                            </div>
+                          )}
                         </td>
 
                         {/* Message Preview */}
                         <td className="py-4 px-4 font-montserrat text-left text-[13px] max-w-55">
-                          <p className="truncate text-gray-800" title={item.message}>
-                            {item.message || '-'}
+                          <p className="truncate text-gray-800" title={displayMessage}>
+                            {displayMessage}
                           </p>
                         </td>
 

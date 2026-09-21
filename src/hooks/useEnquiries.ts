@@ -10,7 +10,14 @@ export interface Enquiry {
   phone: string;
   dateOfBirth?: string;
   location?: string;
-  message: string;
+  message?: string;
+  comment?: string;
+  eventLocation?: string;
+  eventDate?: string;
+  startTime?: string;
+  eventType?: string;
+  guests?: string;
+  specialRequest?: string;
   status: string;
   source?: string;
   createdAt: string;

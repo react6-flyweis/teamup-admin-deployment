@@ -10,6 +10,7 @@ import HeaderIcon from '@/assets/icons/HeaderIcon';
 import SocialReviewsIcon from '@/assets/icons/SocailReviewsIcon';
 import FooterIcon from '@/assets/icons/FooterIcon';
 import CorporateIcon from '@/assets/icons/CorporateIcon';
+import SocialEventsIcon from '@/assets/icons/SocialEventsIcon';
 import EnquiriesIcon from '@/assets/icons/EnquiriesIcon';
 import SecurityIcon from '@/assets/icons/SecurityIcon';
 import UserIcon from '@/assets/icons/UserIcon';
@@ -50,11 +51,28 @@ export const navigationItems: NavigationItem[] = [
     permission: 'manage_footer',
     tabId: 'manage_footer',
   },
+  // Hidden legacy Corporates tab
+  // {
+  //   id: 'manage-corporate',
+  //   label: 'Corporates',
+  //   icon: CorporateIcon,
+  //   path: '/manage-corporate',
+  //   permission: 'manage_home',
+  //   tabId: 'manage_home',
+  // },
   {
-    id: 'manage-corporate',
-    label: 'Corporates',
+    id: 'social-events',
+    label: 'Social Events',
+    icon: SocialEventsIcon,
+    path: '/social-events',
+    permission: 'manage_home',
+    tabId: 'manage_home',
+  },
+  {
+    id: 'corporate-events',
+    label: 'Corporate Events',
     icon: CorporateIcon,
-    path: '/manage-corporate',
+    path: '/corporate-events',
     permission: 'manage_home',
     tabId: 'manage_home',
   },
