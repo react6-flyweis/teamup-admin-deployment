@@ -83,7 +83,7 @@ const LocationHoursForm: React.FC = () => {
   const [data, setData] = useState<LocationInfo>({
     address: "",
     mapEmbedUrl: "",
-    mapImage: "",
+    mapImageUrl: "",
     hours: getDefaultHours(),
   });
 
@@ -99,7 +99,7 @@ const LocationHoursForm: React.FC = () => {
       setData({
         address: currentLocation.address || "",
         mapEmbedUrl: currentLocation.mapEmbedUrl || "",
-        mapImage: currentLocation.mapImage || "",
+        mapImageUrl: currentLocation.mapImageUrl || currentLocation.mapImage || "",
         hours: getDefaultHours(currentLocation.openingHours),
       });
     }
@@ -117,7 +117,8 @@ const LocationHoursForm: React.FC = () => {
     const payload = {
       address: data.address,
       mapEmbedUrl: data.mapEmbedUrl,
-      mapImage: data.mapImage,
+      mapImageUrl: data.mapImageUrl,
+      mapImage: data.mapImageUrl,
       openingHours: data.hours.map((hour) => {
         const isClosed =
           hour.openTime === "Closed" || hour.closeTime === "Closed";
@@ -187,8 +188,8 @@ const LocationHoursForm: React.FC = () => {
             label="Location Map Image"
             labelClassName="block text-sm text-gray-400 mb-2"
             hint="PNG, JPG, WebP"
-            value={data.mapImage || ""}
-            onChange={(url) => setData({ ...data, mapImage: url })}
+            value={data.mapImageUrl || ""}
+            onChange={(url) => setData({ ...data, mapImageUrl: url })}
             placeholder="Paste map image URL or upload image"
             accept="image/*"
             previewHeight="h-36"
