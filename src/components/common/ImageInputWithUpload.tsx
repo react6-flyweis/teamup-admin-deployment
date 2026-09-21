@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { uploadFile } from '@/utils/fileUpload';
 import UploadIcon from '@/assets/icons/UploadIcon';
+import { isVideoUrl, resolvePreviewUrl } from '@/utils/mediaUtils';
 
 interface ImageInputWithUploadProps {
   value: string;
@@ -34,26 +35,6 @@ const parseAspectRatio = (aspectRatio?: string, hint?: string): { cssRatio: stri
   return null;
 };
 
-const resolvePreviewUrl = (url: string): string => {
-  if (!url) return '';
-  if (
-    url.startsWith('blob:') ||
-    url.startsWith('data:') ||
-    url.startsWith('http://') ||
-    url.startsWith('https://')
-  ) {
-    return url;
-  }
-  const apiBase = import.meta.env.VITE_API_URL || '';
-  try {
-    const origin = apiBase ? new URL(apiBase).origin : 'https://api.teamuparena.com';
-    const cleanPath = url.startsWith('/') ? url : `/${url}`;
-    return `${origin}${cleanPath}`;
-  } catch {
-    return url;
-  }
-};
-
 export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   value,
   onChange,
@@ -75,6 +56,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const [selectedFileType, setSelectedFileType] = useState<'image' | 'video' | null>(null);
   const [hasLoadError, setHasLoadError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,6 +98,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
       URL.revokeObjectURL(localPreview);
     }
     setLocalPreview(objectUrl);
+    setSelectedFileType(file.type.startsWith('video/') ? 'video' : 'image');
     setHasLoadError(false);
 
     setIsUploading(true);
@@ -139,6 +122,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   };
 
   const previewSrc = localPreview || resolvePreviewUrl(value);
+  const isVideo = selectedFileType === 'video' || (!selectedFileType && isVideoUrl(previewSrc));
 
   return (
     <div className={className}>
@@ -161,6 +145,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
               URL.revokeObjectURL(localPreview);
               setLocalPreview(null);
             }
+            setSelectedFileType(null);
             onChange(e.target.value);
           }}
           placeholder={placeholder}
@@ -215,7 +200,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
               </svg>
               <span className="text-[11px]">Preview unavailable</span>
             </div>
-          ) : previewSrc.match(/\.(mp4|webm|ogg|mov)$/i) || previewSrc.includes('video') ? (
+          ) : isVideo ? (
             <video
               key={previewSrc}
               src={previewSrc}
@@ -240,7 +225,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
 
           {ratioInfo && !hasLoadError && (
             <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[10px] text-gray-300 font-mono font-medium pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity z-20">
-              {ratioInfo.label}
+              {isVideo ? `VIDEO • ${ratioInfo.label}` : ratioInfo.label}
             </span>
           )}
         </div>
