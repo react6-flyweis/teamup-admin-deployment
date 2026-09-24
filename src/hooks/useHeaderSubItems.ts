@@ -88,6 +88,7 @@ export interface MenuItemPayload {
   iconUrl?: string;
   type: string;
   linkedItemId?: string;
+  videoUrl?: string;
   order?: number;
   isActive?: boolean;
 }

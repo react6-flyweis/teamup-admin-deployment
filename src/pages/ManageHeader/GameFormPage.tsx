@@ -66,7 +66,8 @@ const GameFormPage: React.FC = () => {
           pageHeadline: apiItem.title || gameData?.name || '',
           pageTagline: detailsMap['Tagline'] || '',
           cardDescription: apiItem.taglineDescription || gameData?.description || '',
-          pageHeroImage: gameData?.imageUrl || gameData?.cardImageUrl || gameData?.bannerImageUrl || '',
+          pageHeroImage: gameData?.imageUrl || gameData?.cardImageUrl || gameData?.bannerImageUrl || apiItem.heroImageUrl || apiItem.imageUrl || '',
+          videoUrl: gameData?.videoUrl || apiItem.videoUrl || '',
           heroBookNowLink: apiItem.bookingUrl || '',
           pageDetails: {
             peoplePerMachine: people,
@@ -126,6 +127,7 @@ const GameFormPage: React.FC = () => {
           iconUrl: subItemData.icon || '',
           type: 'game',
           linkedItemId: subItemData.linkedItemId,
+          videoUrl: subItemData.videoUrl || '',
           isActive: subItemData.isActive ?? true,
         });
       } else {
@@ -139,6 +141,7 @@ const GameFormPage: React.FC = () => {
           iconUrl: subItemData.icon || '',
           type: 'game',
           linkedItemId: subItemData.linkedItemId,
+          videoUrl: subItemData.videoUrl || '',
           order: 1,
           isActive: subItemData.isActive ?? true,
         });
