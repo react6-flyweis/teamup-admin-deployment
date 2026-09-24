@@ -6,6 +6,7 @@ import { CloseIcon, UploadIcon, TrashIcon } from '@/assets/icons';
 import { useGamesQuery } from '@/hooks/useGames';
 import apiClient from '@/utils/apiClient';
 import { uploadFile } from '@/utils/fileUpload';
+import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
 
 interface GameFormProps {
   onClose: () => void;
@@ -37,7 +38,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
   const [pageTagline, setPageTagline] = useState('');
   const [cardDescription, setCardDescription] = useState('');
   const [pageHeroImage, setPageHeroImage] = useState('');
-  const heroImageRef = useRef<HTMLInputElement>(null);
+  const [videoUrl, setVideoUrl] = useState('');
   const [heroBookNowLink, setHeroBookNowLink] = useState('');
 
   // ─── Choose Game fields ────────────────────────────────────
@@ -72,6 +73,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
       setPageTagline(initialData.pageTagline || '');
       setCardDescription(initialData.cardDescription || '');
       setPageHeroImage(initialData.pageHeroImage || '');
+      setVideoUrl(initialData.videoUrl || (initialData as any).heroVideoUrl || (initialData as any).pageHeroVideo || '');
       setHeroBookNowLink(initialData.heroBookNowLink || '');
       // Game details
       setPeoplePerMachine(initialData.pageDetails?.peoplePerMachine || '');
@@ -109,6 +111,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
           setPageHeadline(linkedGame.name || gAny.gameName || initialData.pageHeadline || '');
           setCardDescription(linkedGame.description || initialData.cardDescription || '');
           setPageHeroImage(linkedGame.imageUrl || gAny.cardImageUrl || gAny.bannerImageUrl || initialData.pageHeroImage || '');
+          setVideoUrl(initialData.videoUrl || linkedGame.videoUrl || gAny.videoUrl || '');
           const pVal = initialData.pageDetails?.price || (linkedGame.priceFrom != null ? String(linkedGame.priceFrom) : (gAny.pricePerPerson != null ? String(gAny.pricePerPerson) : ''));
           setPrice(pVal);
           const tVal = initialData.pageDetails?.timeMin || linkedGame.duration || gAny.timeOption || '';
@@ -149,6 +152,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
           setPageHeadline(matchedGame.name || mAny.gameName || '');
           setCardDescription(matchedGame.description || initialData.cardDescription || '');
           setPageHeroImage(matchedGame.imageUrl || mAny.cardImageUrl || mAny.bannerImageUrl || initialData.pageHeroImage || '');
+          setVideoUrl(initialData.videoUrl || matchedGame.videoUrl || mAny.videoUrl || '');
           const pVal = matchedGame.priceFrom != null ? String(matchedGame.priceFrom) : (mAny.pricePerPerson != null ? String(mAny.pricePerPerson) : '');
           setPrice(pVal);
           const tVal = matchedGame.duration || mAny.timeOption || '';
@@ -190,6 +194,10 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
       const img = foundGame.imageUrl || fAny.cardImageUrl || fAny.bannerImageUrl;
       if (img) {
         setPageHeroImage(img);
+      }
+      const vid = foundGame.videoUrl || fAny.videoUrl;
+      if (vid !== undefined) {
+        setVideoUrl(vid || '');
       }
       const priceVal = foundGame.priceFrom ?? fAny.pricePerPerson;
       setPrice(priceVal != null ? String(priceVal) : '');
@@ -246,6 +254,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
             iconUrl: icon,
             heroImageUrl: pageHeroImage,
             imageUrl: pageHeroImage,
+            videoUrl: videoUrl,
             tagline: pageTagline,
             taglineDescription: cardDescription,
             bookingUrl: heroBookNowLink,
@@ -277,6 +286,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
             imageUrl: pageHeroImage,
             cardImageUrl: pageHeroImage,
             bannerImageUrl: pageHeroImage,
+            videoUrl: videoUrl,
             duration: timeMin,
             timeOption: timeMin,
             priceFrom: isNaN(numPrice) ? 45 : numPrice,
@@ -310,6 +320,7 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
         pageTagline,
         cardDescription,
         pageHeroImage,
+        videoUrl,
         heroBookNowLink,
         // Game
         pageDetails: { peoplePerMachine, timeMin, lanes, price, minAge, wheelchairAccess },
@@ -524,27 +535,55 @@ const GameForm: React.FC<GameFormProps> = ({ onClose, onSave, initialData, subIt
                 <label className={labelCls}>Book Now Link</label>
                 <input type="text" value={heroBookNowLink} onChange={e => setHeroBookNowLink(e.target.value)} placeholder="e.g. /book/birthday" className={inputCls} />
               </div>
-              <div>
-                <label className={labelCls}>
-                  Hero Image <span className="text-xs text-gray-400 font-normal ml-1.5">(16:9 • Rec: 1920×1080 or 2560×1440 px)</span>
-                </label>
-                <div className="flex items-center gap-4">
-                  {pageHeroImage ? (
-                    <div className="relative group w-44 aspect-video rounded-lg bg-[#2A2A2A] border border-[#3A3530] overflow-hidden flex items-center justify-center">
-                      <img src={pageHeroImage} alt="Hero" className="w-full h-full object-cover" />
-                      <button type="button" onClick={() => setPageHeroImage('')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><CloseIcon /></button>
-                      <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/75 text-[10px] text-gray-300 font-mono pointer-events-none">16:9</span>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => heroImageRef.current?.click()} className="w-44 aspect-video rounded-lg bg-[#2A2A2A] border border-dashed border-[#3A3530] hover:border-[#FB3748] hover:text-[#FB3748] flex flex-col items-center justify-center text-gray-500 transition-colors">
-                      <UploadIcon /><span className="text-[10px] mt-1">Upload Hero</span>
+
+              {/* Background Image (Photo / Fallback Poster) */}
+              <div className="bg-[#242424] border border-[#3A3530] rounded-xl p-5">
+                <ImageInputWithUpload
+                  label="Hero Background Photo (Initial / Fallback Poster)"
+                  hint="16:9 • Rec: 1920×1080 or 2560×1440 px • WebP/JPG/PNG"
+                  value={pageHeroImage}
+                  onChange={setPageHeroImage}
+                  placeholder="Paste photo URL or click upload"
+                  accept="image/*"
+                  aspectRatio="16:9"
+                  previewWidth="w-full max-w-xl"
+                  inputClassName="w-full h-10 px-3 rounded bg-[#1C1C1C] border border-[#3A3530] text-white text-sm focus:border-[#FB3748] focus:outline-none"
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  Displays immediately as the initial poster while the video loads, and serves as the fallback on mobile low-power mode or slow connections.
+                </p>
+              </div>
+
+              {/* Background Video (Optional) */}
+              <div className="bg-[#242424] border border-[#3A3530] rounded-xl p-5">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-gray-400 font-medium">Hero Background Video (Optional)</span>
+                  {videoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setVideoUrl('')}
+                      className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded bg-red-950/40 border border-red-900/50 hover:bg-red-900/40 transition-colors cursor-pointer"
+                    >
+                      Remove Video
                     </button>
                   )}
-                  <div className="flex-1">
-                    <input type="text" value={pageHeroImage} onChange={e => setPageHeroImage(e.target.value)} placeholder="Or paste image URL" className={`${inputCls} text-sm`} />
-                    <input type="file" ref={heroImageRef} className="hidden" accept="image/*" onChange={e => handleFileChange(e, setPageHeroImage)} />
-                  </div>
                 </div>
+                <ImageInputWithUpload
+                  hint="16:9 • MP4/WebM • Max 10MB"
+                  value={videoUrl || ''}
+                  onChange={setVideoUrl}
+                  placeholder="Paste video URL or click upload"
+                  accept="video/*"
+                  aspectRatio="16:9"
+                  previewWidth="w-full max-w-xl"
+                  buttonText="Upload Video"
+                  maxSizeBytes={10 * 1024 * 1024}
+                  maxSizeErrorMessage="Video size exceeds the 10MB limit. Please upload a smaller video."
+                  inputClassName="w-full h-10 px-3 rounded bg-[#1C1C1C] border border-[#3A3530] text-white text-sm focus:border-[#FB3748] focus:outline-none"
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  Autoplays in a loop behind the hero section. Leave empty to use only the background photo.
+                </p>
               </div>
             </div>
           </div>
