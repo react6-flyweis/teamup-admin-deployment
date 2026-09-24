@@ -66,8 +66,16 @@ export interface HeaderSubItem {
     description: string;
     category?: string;
     imageUrl?: string;
+    cardImageUrl?: string;
+    bannerImageUrl?: string;
+    videoUrl?: string;
     duration?: string;
     priceFrom?: number;
+    pricePerPerson?: number;
+    peopleAllowedPerLane?: number;
+    totalLanes?: number;
+    minimumAgeRequirement?: string;
+    wheelchairAccessible?: boolean;
     tags?: string[];
     isActive?: boolean;
   };
@@ -77,6 +85,7 @@ export interface HeaderSubItem {
   pageTagline?: string;
   cardDescription?: string; // Description shown on cards (e.g. in Team Parties)
   pageHeroImage?: string;
+  videoUrl?: string;
   pageDetails?: {
     peoplePerMachine: string;
     timeMin: string;
