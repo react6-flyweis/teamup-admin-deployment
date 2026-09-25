@@ -15,6 +15,7 @@ import { uploadFile } from "@/utils/fileUpload";
 import ImageInputWithUpload from "@/components/common/ImageInputWithUpload";
 import { useHeaderCategoriesQuery } from "@/hooks/useHeaderCategories";
 import SuccessModal from "@/components/common/SuccessModal";
+import { MAX_VIDEO_SIZE_MB } from "@/constants/upload";
 
 export interface GameFormValues {
   // Navigation & Category
@@ -100,16 +101,35 @@ const GameForm: React.FC<GameFormProps> = ({
     [categoriesData?.categories],
   );
 
-  const effectiveGameId = gameId && gameId !== "new" ? gameId : (initialData?.linkedItemId ? String(initialData.linkedItemId) : undefined);
-  const effectiveMenuItemId = (menuItemId || subItemId) && (menuItemId || subItemId) !== "new" ? (menuItemId || subItemId) : (initialData?.id ? String(initialData.id) : undefined);
-  const isNewGame = (!gameId || gameId === "new") && (!effectiveMenuItemId || effectiveMenuItemId === "new") && !initialData?.id;
+  const effectiveGameId =
+    gameId && gameId !== "new"
+      ? gameId
+      : initialData?.linkedItemId
+        ? String(initialData.linkedItemId)
+        : undefined;
+  const effectiveMenuItemId =
+    (menuItemId || subItemId) && (menuItemId || subItemId) !== "new"
+      ? menuItemId || subItemId
+      : initialData?.id
+        ? String(initialData.id)
+        : undefined;
+  const isNewGame =
+    (!gameId || gameId === "new") &&
+    (!effectiveMenuItemId || effectiveMenuItemId === "new") &&
+    !initialData?.id;
 
-  const [selectedGameId, setSelectedGameId] = useState<string>(effectiveGameId || "");
-  const [resolvedMenuItemId, setResolvedMenuItemId] = useState<string>(effectiveMenuItemId || "");
+  const [selectedGameId, setSelectedGameId] = useState<string>(
+    effectiveGameId || "",
+  );
+  const [resolvedMenuItemId, setResolvedMenuItemId] = useState<string>(
+    effectiveMenuItemId || "",
+  );
   const [isSlugEditing, setIsSlugEditing] = useState(false);
   const [hasManuallyEditedSlug, setHasManuallyEditedSlug] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(Boolean(effectiveGameId || effectiveMenuItemId));
+  const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(
+    Boolean(effectiveGameId || effectiveMenuItemId),
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -226,7 +246,8 @@ const GameForm: React.FC<GameFormProps> = ({
         try {
           const res = await apiClient.get(`/menu-items/${effectiveMenuItemId}`);
           const raw = res?.data;
-          menuItemData = raw?.menuItem || raw?.data?.menuItem || raw?.data || raw;
+          menuItemData =
+            raw?.menuItem || raw?.data?.menuItem || raw?.data || raw;
         } catch (err) {
           console.warn("Could not fetch menu item with menuItemId:", err);
         }
@@ -234,7 +255,10 @@ const GameForm: React.FC<GameFormProps> = ({
 
       // 3. Fallback: if gameData wasn't fetched directly, check menuItemData pointers
       if (!gameData && menuItemData) {
-        const linkedId = menuItemData.linkedItemId != null ? String(menuItemData.linkedItemId) : undefined;
+        const linkedId =
+          menuItemData.linkedItemId != null
+            ? String(menuItemData.linkedItemId)
+            : undefined;
         if (linkedId) {
           try {
             const res = await fetchGame(linkedId);
@@ -244,7 +268,11 @@ const GameForm: React.FC<GameFormProps> = ({
           }
         }
         const rawPath = menuItemData.linkUrl || menuItemData.path || "";
-        const extractedSlug = (menuItemData.slug || rawPath.replace(/^\/?(games\/)?/, "")).replace(/^\//, "").trim();
+        const extractedSlug = (
+          menuItemData.slug || rawPath.replace(/^\/?(games\/)?/, "")
+        )
+          .replace(/^\//, "")
+          .trim();
         if (!gameData && extractedSlug) {
           try {
             const res = await fetchGame(extractedSlug);
@@ -255,7 +283,9 @@ const GameForm: React.FC<GameFormProps> = ({
         }
         if (!gameData && availableGames.length > 0) {
           const slugLower = extractedSlug.toLowerCase();
-          const titleLower = (menuItemData?.title || menuItemData?.name || "").toLowerCase().trim();
+          const titleLower = (menuItemData?.title || menuItemData?.name || "")
+            .toLowerCase()
+            .trim();
           const found = availableGames.find((g: any) => {
             const gSlug = (g.slug || "").toLowerCase().trim();
             const gName = (g.name || g.gameName || "").toLowerCase().trim();
@@ -294,34 +324,98 @@ const GameForm: React.FC<GameFormProps> = ({
 
       const price = gameData?.pricePerPerson ?? gameData?.priceFrom;
       const time = gameData?.timeOption || gameData?.duration;
-      const lanes = gameData?.totalLanes != null ? String(gameData.totalLanes) : "";
-      const people = gameData?.peopleAllowedPerLane != null ? String(gameData.peopleAllowedPerLane) : "";
+      const lanes =
+        gameData?.totalLanes != null ? String(gameData.totalLanes) : "";
+      const people =
+        gameData?.peopleAllowedPerLane != null
+          ? String(gameData.peopleAllowedPerLane)
+          : "";
 
-      const finalName = gameData?.name || gameData?.gameName || menuItemData?.title || menuItemData?.name || "";
-      const rawSlug = gameData?.slug || menuItemData?.slug || (menuItemData?.linkUrl || menuItemData?.path || "").replace(/^\/?(games\/)?/, "");
+      const finalName =
+        gameData?.name ||
+        gameData?.gameName ||
+        menuItemData?.title ||
+        menuItemData?.name ||
+        "";
+      const rawSlug =
+        gameData?.slug ||
+        menuItemData?.slug ||
+        (menuItemData?.linkUrl || menuItemData?.path || "").replace(
+          /^\/?(games\/)?/,
+          "",
+        );
       const cleanSlug = rawSlug.replace(/^\//, "").trim();
 
       reset({
         selectedCategoryId: categoryIdFromUrl || defaultCategoryId || "",
         name: finalName,
         slug: cleanSlug,
-        icon: gameData?.gameIconUrl || menuItemData?.icon || menuItemData?.iconUrl || "",
+        icon:
+          gameData?.gameIconUrl ||
+          menuItemData?.icon ||
+          menuItemData?.iconUrl ||
+          "",
         pageType: "game",
-        pageHeadline: gameData?.name || gameData?.gameName || menuItemData?.title || menuItemData?.name || "",
-        pageTagline: detailsMap["Tagline"] || menuItemData?.tagline || menuItemData?.pageTagline || "",
-        cardDescription: gameData?.description || menuItemData?.taglineDescription || menuItemData?.cardDescription || "",
-        cardImage: gameData?.cardImageUrl || gameData?.imageUrl || menuItemData?.cardImage || menuItemData?.imageUrl || "",
-        pageHeroImage: gameData?.bannerImageUrl || gameData?.imageUrl || gameData?.cardImageUrl || menuItemData?.heroImageUrl || menuItemData?.imageUrl || "",
+        pageHeadline:
+          gameData?.name ||
+          gameData?.gameName ||
+          menuItemData?.title ||
+          menuItemData?.name ||
+          "",
+        pageTagline:
+          detailsMap["Tagline"] ||
+          menuItemData?.tagline ||
+          menuItemData?.pageTagline ||
+          "",
+        cardDescription:
+          gameData?.description ||
+          menuItemData?.taglineDescription ||
+          menuItemData?.cardDescription ||
+          "",
+        cardImage:
+          gameData?.cardImageUrl ||
+          gameData?.imageUrl ||
+          menuItemData?.cardImage ||
+          menuItemData?.imageUrl ||
+          "",
+        pageHeroImage:
+          gameData?.bannerImageUrl ||
+          gameData?.imageUrl ||
+          gameData?.cardImageUrl ||
+          menuItemData?.heroImageUrl ||
+          menuItemData?.imageUrl ||
+          "",
         videoUrl: gameData?.videoUrl || menuItemData?.videoUrl || "",
-        heroBookNowLink: menuItemData?.bookingUrl || menuItemData?.heroBookNowLink || "",
-        peoplePerMachine: people || (detailsMap["How Many"] ? detailsMap["How Many"].replace(/[^0-9]/g, "") : ""),
+        heroBookNowLink:
+          menuItemData?.bookingUrl || menuItemData?.heroBookNowLink || "",
+        peoplePerMachine:
+          people ||
+          (detailsMap["How Many"]
+            ? detailsMap["How Many"].replace(/[^0-9]/g, "")
+            : ""),
         timeMin: time || detailsMap["Time"] || "",
-        lanes: lanes || (detailsMap["How Many LANES"] ? detailsMap["How Many LANES"].replace(/[^0-9]/g, "") : ""),
-        price: price != null ? String(price) : (detailsMap["Price"] ? detailsMap["Price"].replace(/[^0-9.]/g, "") : ""),
-        minAge: gameData?.minimumAgeRequirement || detailsMap["Minimum Age"] || "",
+        lanes:
+          lanes ||
+          (detailsMap["How Many LANES"]
+            ? detailsMap["How Many LANES"].replace(/[^0-9]/g, "")
+            : ""),
+        price:
+          price != null
+            ? String(price)
+            : detailsMap["Price"]
+              ? detailsMap["Price"].replace(/[^0-9.]/g, "")
+              : "",
+        minAge:
+          gameData?.minimumAgeRequirement || detailsMap["Minimum Age"] || "",
         idRequired: Boolean(gameData?.idRequired ?? false),
-        wheelchairAccess: Boolean(gameData?.wheelchairAccessible ?? (detailsMap["Wheelchair Access"]?.toLowerCase() === "yes")),
-        tagsInput: gameData?.tags && gameData.tags.length > 0 ? gameData.tags.join(", ") : "family, indoor, featured",
+        wheelchairAccess: Boolean(
+          gameData?.wheelchairAccessible ??
+          detailsMap["Wheelchair Access"]?.toLowerCase() === "yes",
+        ),
+        tagsInput:
+          gameData?.tags && gameData.tags.length > 0
+            ? gameData.tags.join(", ")
+            : "family, indoor, featured",
         otherGames: menuItemData?.otherGames || [],
         sectionHeadline: "",
         sectionDescription: "",
@@ -343,7 +437,16 @@ const GameForm: React.FC<GameFormProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [effectiveGameId, effectiveMenuItemId, categoryIdFromUrl, defaultCategoryId, isNewGame, reset, initialData, availableGames]);
+  }, [
+    effectiveGameId,
+    effectiveMenuItemId,
+    categoryIdFromUrl,
+    defaultCategoryId,
+    isNewGame,
+    reset,
+    initialData,
+    availableGames,
+  ]);
 
   const onSubmit = async (data: GameFormValues) => {
     const cleanSlug = (data.slug.trim() || slugify(data.name))
@@ -436,7 +539,8 @@ const GameForm: React.FC<GameFormProps> = ({
         },
       ];
 
-      const targetMenuId = resolvedMenuItemId || effectiveMenuItemId || initialData?.id;
+      const targetMenuId =
+        resolvedMenuItemId || effectiveMenuItemId || initialData?.id;
 
       const menuPayload = {
         title: data.name.trim(),
@@ -513,10 +617,14 @@ const GameForm: React.FC<GameFormProps> = ({
 
   // ─── Checklist helpers ─────────────────────────────────────
   const addChecklist = () =>
-    setValue("checklistItems", [
-      ...checklistItems,
-      { id: Date.now().toString(), title: "", subtext: "" },
-    ], { shouldDirty: true });
+    setValue(
+      "checklistItems",
+      [
+        ...checklistItems,
+        { id: Date.now().toString(), title: "", subtext: "" },
+      ],
+      { shouldDirty: true },
+    );
 
   const removeChecklist = (id: string) =>
     setValue(
@@ -554,10 +662,14 @@ const GameForm: React.FC<GameFormProps> = ({
   };
 
   const addChooseGameCard = () =>
-    setValue("chooseGameCards", [
-      ...chooseGameCards,
-      { id: Date.now().toString(), title: "", image: "", link: "" },
-    ], { shouldDirty: true });
+    setValue(
+      "chooseGameCards",
+      [
+        ...chooseGameCards,
+        { id: Date.now().toString(), title: "", image: "", link: "" },
+      ],
+      { shouldDirty: true },
+    );
 
   const removeChooseGameCard = (id: string) =>
     setValue(
@@ -589,7 +701,9 @@ const GameForm: React.FC<GameFormProps> = ({
     return (
       <div className="p-16 flex flex-col items-center justify-center text-white">
         <div className="w-10 h-10 border-4 border-[#FB3748] border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-400 text-sm animate-pulse">Loading game details...</p>
+        <p className="text-gray-400 text-sm animate-pulse">
+          Loading game details...
+        </p>
       </div>
     );
   }
@@ -623,10 +737,7 @@ const GameForm: React.FC<GameFormProps> = ({
                   Controls which header dropdown this game reflects under
                 </span>
               </div>
-              <select
-                {...register("selectedCategoryId")}
-                className={inputCls}
-              >
+              <select {...register("selectedCategoryId")} className={inputCls}>
                 <option value="">
                   -- Choose Category (Default: Choose Game) --
                 </option>
@@ -738,7 +849,9 @@ const GameForm: React.FC<GameFormProps> = ({
                     />
                     <button
                       type="button"
-                      onClick={() => setValue("icon", "", { shouldDirty: true })}
+                      onClick={() =>
+                        setValue("icon", "", { shouldDirty: true })
+                      }
                       className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
                     >
                       <CloseIcon />
@@ -824,7 +937,9 @@ const GameForm: React.FC<GameFormProps> = ({
                   label="Listing Card Thumbnail (1:1 Square)"
                   hint="1:1 • Rec: 800×800 or 1000×1000 px • WebP/JPG/PNG"
                   value={cardImage || ""}
-                  onChange={(val) => setValue("cardImage", val, { shouldDirty: true })}
+                  onChange={(val) =>
+                    setValue("cardImage", val, { shouldDirty: true })
+                  }
                   placeholder="Paste square image URL or click upload"
                   accept="image/*"
                   aspectRatio="1:1"
@@ -843,7 +958,9 @@ const GameForm: React.FC<GameFormProps> = ({
                   label="Hero Background Photo (Initial / Fallback Poster)"
                   hint="16:9 • Rec: 1920×1080 or 2560×1440 px • WebP/JPG/PNG"
                   value={pageHeroImage || ""}
-                  onChange={(val) => setValue("pageHeroImage", val, { shouldDirty: true })}
+                  onChange={(val) =>
+                    setValue("pageHeroImage", val, { shouldDirty: true })
+                  }
                   placeholder="Paste photo URL or click upload"
                   accept="image/*"
                   aspectRatio="16:9"
@@ -866,7 +983,9 @@ const GameForm: React.FC<GameFormProps> = ({
                   {videoUrl && (
                     <button
                       type="button"
-                      onClick={() => setValue("videoUrl", "", { shouldDirty: true })}
+                      onClick={() =>
+                        setValue("videoUrl", "", { shouldDirty: true })
+                      }
                       className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded bg-red-950/40 border border-red-900/50 hover:bg-red-900/40 transition-colors cursor-pointer"
                     >
                       Remove Video
@@ -874,16 +993,16 @@ const GameForm: React.FC<GameFormProps> = ({
                   )}
                 </div>
                 <ImageInputWithUpload
-                  hint="16:9 • MP4/WebM • Max 10MB"
+                  hint={`16:9 • MP4/WebM • Max ${MAX_VIDEO_SIZE_MB}MB`}
                   value={videoUrl || ""}
-                  onChange={(val) => setValue("videoUrl", val, { shouldDirty: true })}
+                  onChange={(val) =>
+                    setValue("videoUrl", val, { shouldDirty: true })
+                  }
                   placeholder="Paste video URL or click upload"
                   accept="video/*"
                   aspectRatio="16:9"
                   previewWidth="w-full max-w-xl"
                   buttonText="Upload Video"
-                  maxSizeBytes={10 * 1024 * 1024}
-                  maxSizeErrorMessage="Video size exceeds the 10MB limit. Please upload a smaller video."
                   inputClassName="w-full h-10 px-3 rounded bg-[#1C1C1C] border border-[#3A3530] text-white text-sm focus:border-[#FB3748] focus:outline-none"
                 />
                 <p className="text-xs text-gray-400 mt-2">

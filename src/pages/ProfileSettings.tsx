@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useProfileQuery, useUpdateProfileMutation } from '@/hooks/useProfile';
 import { uploadFile } from '@/utils/fileUpload';
+import {
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_IMAGE_SIZE_ERROR_MESSAGE,
+} from '@/constants/upload';
 import { useAuthStore } from '@/store/authStore';
 import { ROLES } from '@/types';
 import {
@@ -48,11 +52,11 @@ const ProfileSettings: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate size (e.g. max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate size (max limit from constants)
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
       setFeedback({
         type: 'error',
-        message: 'Image file size must be less than 5MB.',
+        message: MAX_IMAGE_SIZE_ERROR_MESSAGE,
       });
       return;
     }
