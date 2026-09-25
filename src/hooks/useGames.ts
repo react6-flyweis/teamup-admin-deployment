@@ -157,3 +157,46 @@ export const fetchGame = async (gameIdOrSlug: string) => {
   const response = await apiClient.get(`/games/${gameIdOrSlug}`);
   return response.data;
 };
+
+export interface GameAttributeIcon {
+  key: string;
+  label: string;
+  iconUrl: string;
+}
+
+export interface GameAttributeIconsResponse {
+  icons: GameAttributeIcon[];
+}
+
+export const useGameAttributeIconsQuery = () => {
+  return useQuery<GameAttributeIconsResponse>({
+    queryKey: ['game-attribute-icons'],
+    queryFn: async () => {
+      const response = await apiClient.get('/games/attribute-icons');
+      return response.data;
+    },
+  });
+};
+
+export interface UpdateGameAttributeIconPayload {
+  key: string;
+  iconUrl?: string;
+  label?: string;
+}
+
+export const useUpdateGameAttributeIconMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ key, iconUrl, label }: UpdateGameAttributeIconPayload) => {
+      const payload: { iconUrl?: string; label?: string } = {};
+      if (iconUrl !== undefined) payload.iconUrl = iconUrl;
+      if (label !== undefined) payload.label = label;
+
+      const response = await apiClient.patch(`/games/attribute-icons/${key}`, payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['game-attribute-icons'] });
+    },
+  });
+};
