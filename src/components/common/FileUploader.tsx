@@ -1,6 +1,13 @@
-import React, { useState, useRef } from 'react';
-import UploadIcon from '@/assets/icons/UploadIcon';
-import { uploadFile } from '@/utils/fileUpload';
+import React, { useState, useRef } from "react";
+import UploadIcon from "@/assets/icons/UploadIcon";
+import { uploadFile } from "@/utils/fileUpload";
+import {
+  MAX_VIDEO_SIZE_BYTES,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_VIDEO_SIZE_ERROR_MESSAGE,
+  MAX_IMAGE_SIZE_ERROR_MESSAGE,
+  getDefaultFileSizeErrorMessage,
+} from "@/constants/upload";
 
 interface FileUploaderProps {
   value: string;
@@ -9,15 +16,19 @@ interface FileUploaderProps {
   className?: string;
   aspectRatio?: string;
   helperText?: string;
+  maxSizeBytes?: number;
+  maxSizeErrorMessage?: string;
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({
   value,
   onChange,
-  accept = 'image/*,video/*',
-  className = '',
+  accept = "image/*,video/*",
+  className = "",
   aspectRatio,
   helperText,
+  maxSizeBytes,
+  maxSizeErrorMessage,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -27,18 +38,29 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isVideoFile = file.type.startsWith("video/") || Boolean(accept?.includes("video"));
+    const effectiveLimit = maxSizeBytes ?? (isVideoFile ? MAX_VIDEO_SIZE_BYTES : MAX_IMAGE_SIZE_BYTES);
+    const defaultMsg = isVideoFile ? MAX_VIDEO_SIZE_ERROR_MESSAGE : MAX_IMAGE_SIZE_ERROR_MESSAGE;
+
+    if (file.size > effectiveLimit) {
+      setUploadError(
+        maxSizeErrorMessage || (maxSizeBytes ? getDefaultFileSizeErrorMessage(maxSizeBytes) : defaultMsg),
+      );
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
     setIsUploading(true);
     setUploadError(null);
     try {
       const fileUrl = await uploadFile(file);
       onChange(fileUrl);
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'message' in err) {
-        const error = err as { message: string; response?: { data?: { message?: string } } };
-        setUploadError(error.response?.data?.message || error.message || 'Failed to upload file');
-      } else {
-        setUploadError('Failed to upload file');
-      }
+      setUploadError(
+        err instanceof Error ? err.message : "Failed to upload file",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -48,20 +70,25 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     fileInputRef.current?.click();
   };
 
-  const isVideo = value.match(/\.(mp4|webm|ogg|mov)$/i) || value.includes('video');
+  const isVideo =
+    value.match(/\.(mp4|webm|ogg|mov)$/i) || value.includes("video");
 
   return (
     <div className={className}>
-      <div 
+      <div
         onClick={!value && !isUploading ? triggerFileInput : undefined}
-        style={aspectRatio ? { aspectRatio: aspectRatio.replace(':', ' / ') } : undefined}
-        className={`relative w-full ${aspectRatio ? 'max-w-xl h-auto' : 'h-50'} rounded-lg border-2 border-dashed border-gray-500 flex flex-col items-center justify-center overflow-hidden ${!value && !isUploading ? 'cursor-pointer hover:border-[#E1017D] transition-colors' : ''}`}
+        style={
+          aspectRatio
+            ? { aspectRatio: aspectRatio.replace(":", " / ") }
+            : undefined
+        }
+        className={`relative w-full ${aspectRatio ? "max-w-xl h-auto" : "h-50"} rounded-lg border-2 border-dashed border-gray-500 flex flex-col items-center justify-center overflow-hidden ${!value && !isUploading ? "cursor-pointer hover:border-[#E1017D] transition-colors" : ""}`}
       >
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          onChange={handleFileChange} 
-          className="hidden" 
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
           accept={accept}
         />
         {isUploading ? (
@@ -72,15 +99,29 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         ) : value ? (
           <>
             {isVideo ? (
-              <video src={value} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50" />
+              <video
+                src={value}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover opacity-50"
+              />
             ) : (
-              <img src={value} alt="Uploaded file" className="absolute inset-0 w-full h-full object-cover opacity-50" />
+              <img
+                src={value}
+                alt="Uploaded file"
+                className="absolute inset-0 w-full h-full object-cover opacity-50"
+              />
             )}
             <div className="relative z-10 flex flex-col items-center gap-2">
-              <button 
+              <button
                 type="button"
-                className="bg-black/50 hover:bg-black/75 px-4 py-2 rounded text-white text-sm backdrop-blur-sm transition-colors" 
-                onClick={(e) => { e.stopPropagation(); onChange(''); }}
+                className="bg-black/50 hover:bg-black/75 px-4 py-2 rounded text-white text-sm backdrop-blur-sm transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange("");
+                }}
               >
                 Remove Media
               </button>
@@ -89,7 +130,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         ) : (
           <div className="text-center">
             <UploadIcon size={32} className="mx-auto mb-2 text-gray-400" />
-            <p className="text-gray-400 text-sm">{helperText || 'Click to upload image or video'}</p>
+            <p className="text-gray-400 text-sm">
+              {helperText || "Click to upload image or video"}
+            </p>
             <p className="text-gray-500 text-xs mt-1">Or enter URL below</p>
           </div>
         )}

@@ -2,6 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { uploadFile } from '@/utils/fileUpload';
 import UploadIcon from '@/assets/icons/UploadIcon';
 import { isVideoUrl, resolvePreviewUrl } from '@/utils/mediaUtils';
+import {
+  MAX_VIDEO_SIZE_BYTES,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_VIDEO_SIZE_ERROR_MESSAGE,
+  MAX_IMAGE_SIZE_ERROR_MESSAGE,
+  getDefaultFileSizeErrorMessage,
+} from '@/constants/upload';
 
 interface ImageInputWithUploadProps {
   value: string;
@@ -20,6 +27,8 @@ interface ImageInputWithUploadProps {
   previewHeight?: string;
   previewWidth?: string;
   buttonText?: string;
+  maxSizeBytes?: number;
+  maxSizeErrorMessage?: string;
 }
 
 const parseAspectRatio = (aspectRatio?: string, hint?: string): { cssRatio: string; label: string } | null => {
@@ -52,6 +61,8 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   previewHeight = 'h-20',
   previewWidth = 'w-32',
   buttonText = 'Upload',
+  maxSizeBytes,
+  maxSizeErrorMessage,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +103,18 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isVideoFile = file.type.startsWith('video/') || Boolean(accept?.includes('video'));
+    const effectiveLimit = maxSizeBytes ?? (isVideoFile ? MAX_VIDEO_SIZE_BYTES : MAX_IMAGE_SIZE_BYTES);
+    const defaultMsg = isVideoFile ? MAX_VIDEO_SIZE_ERROR_MESSAGE : MAX_IMAGE_SIZE_ERROR_MESSAGE;
+
+    if (file.size > effectiveLimit) {
+      setError(maxSizeErrorMessage || (maxSizeBytes ? getDefaultFileSizeErrorMessage(maxSizeBytes) : defaultMsg));
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
     // Create an instant local object URL preview
     const objectUrl = URL.createObjectURL(file);
     if (localPreview) {
@@ -107,12 +130,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
       const url = await uploadFile(file);
       onChange(url);
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'message' in err) {
-        const errorObj = err as { message: string };
-        setError(errorObj.message || 'Upload failed');
-      } else {
-        setError('Upload failed');
-      }
+      setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
