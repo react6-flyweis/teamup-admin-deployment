@@ -120,9 +120,20 @@ export const useDeleteGameMutation = () => {
       const response = await apiClient.delete(`/games/${gameIdOrSlug}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_, gameIdOrSlug) => {
       queryClient.invalidateQueries({ queryKey: ['games'] });
+      queryClient.invalidateQueries({ queryKey: ['game', gameIdOrSlug] });
       queryClient.invalidateQueries({ queryKey: ['game'] });
+      queryClient.invalidateQueries({ queryKey: ['game-pricing'] });
+      queryClient.invalidateQueries({ queryKey: ['game-zones'] });
+      queryClient.invalidateQueries({ queryKey: ['game-equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          typeof query.queryKey[0] === 'string' &&
+          (query.queryKey[0] === 'games' || query.queryKey[0].startsWith('game')),
+      });
     },
   });
 };

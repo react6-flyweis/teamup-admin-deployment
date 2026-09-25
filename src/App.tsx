@@ -181,6 +181,25 @@ function App() {
               }
             />
             <Route
+              path="game-venue/game/new"
+              element={
+                <PermissionGuard tabId="game_venue">
+                  <GameFormPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="game-venue/game/:gameId"
+              element={
+                <PermissionGuard tabId="game_venue">
+                  <GameFormPage />
+                </PermissionGuard>
+              }
+            />
+            <Route path="games" element={<Navigate to="/game-venue" replace />} />
+            <Route path="games/game/new" element={<Navigate to="/game-venue/game/new" replace />} />
+            <Route path="games/game/:gameId" element={<Navigate to="/game-venue/game/:gameId" replace />} />
+            <Route
               path="food-drinks"
               element={
                 <PermissionGuard tabId="bites_drinks">
