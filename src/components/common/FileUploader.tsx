@@ -1,6 +1,13 @@
 import React, { useState, useRef } from "react";
 import UploadIcon from "@/assets/icons/UploadIcon";
 import { uploadFile } from "@/utils/fileUpload";
+import {
+  MAX_VIDEO_SIZE_BYTES,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_VIDEO_SIZE_ERROR_MESSAGE,
+  MAX_IMAGE_SIZE_ERROR_MESSAGE,
+  getDefaultFileSizeErrorMessage,
+} from "@/constants/upload";
 
 interface FileUploaderProps {
   value: string;
@@ -31,10 +38,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (maxSizeBytes && file.size > maxSizeBytes) {
-      const maxMb = (maxSizeBytes / (1024 * 1024)).toFixed(0);
+    const isVideoFile = file.type.startsWith("video/") || Boolean(accept?.includes("video"));
+    const effectiveLimit = maxSizeBytes ?? (isVideoFile ? MAX_VIDEO_SIZE_BYTES : MAX_IMAGE_SIZE_BYTES);
+    const defaultMsg = isVideoFile ? MAX_VIDEO_SIZE_ERROR_MESSAGE : MAX_IMAGE_SIZE_ERROR_MESSAGE;
+
+    if (file.size > effectiveLimit) {
       setUploadError(
-        maxSizeErrorMessage || `File size exceeds the ${maxMb}MB limit.`,
+        maxSizeErrorMessage || (maxSizeBytes ? getDefaultFileSizeErrorMessage(maxSizeBytes) : defaultMsg),
       );
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
