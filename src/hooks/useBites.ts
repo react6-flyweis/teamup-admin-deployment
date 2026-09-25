@@ -87,6 +87,7 @@ export interface FoodDrinksData {
   foodCombos?: FoodCombosSection;
   drinksSection?: DrinksSection;
   menuImages?: MenuImagesSection;
+  bgWallpaperImageUrl?: string;
   [key: string]: unknown;
 }
 
