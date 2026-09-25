@@ -16,6 +16,7 @@ const FoodAndDrinks: React.FC = () => {
     flatbreads: '',
     appetizers: '',
   });
+  const [bgWallpaperImageUrl, setBgWallpaperImageUrl] = useState<string>('');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -30,12 +31,18 @@ const FoodAndDrinks: React.FC = () => {
 
   const updateMutation = useUpdateFoodDrinksContentMutation(locationSlug);
 
-  // Safely extract menuImages from site-content payload
+  // Safely extract menuImages and bgWallpaperImageUrl from site-content payload
   const contentData = siteContentData?.content?.data || siteContentData?.data;
   const apiMenuImages: MenuImagesSection | undefined =
     contentData?.menuImages ||
     (siteContentData?.content as unknown as { menuImages?: MenuImagesSection })?.menuImages ||
     (siteContentData as unknown as { menuImages?: MenuImagesSection })?.menuImages;
+
+  const apiBgWallpaperImageUrl: string =
+    contentData?.bgWallpaperImageUrl ||
+    (siteContentData?.content as unknown as { bgWallpaperImageUrl?: string })?.bgWallpaperImageUrl ||
+    (siteContentData as unknown as { bgWallpaperImageUrl?: string })?.bgWallpaperImageUrl ||
+    '';
 
   // Sync state whenever backend data loads or location changes
   useEffect(() => {
@@ -54,27 +61,19 @@ const FoodAndDrinks: React.FC = () => {
         appetizers: '',
       });
     }
-  }, [apiMenuImages, isContentLoading]);
 
-  // When switching tabs, update/reset inputs to the saved data for that tab
+    if (apiBgWallpaperImageUrl !== undefined) {
+      setBgWallpaperImageUrl(apiBgWallpaperImageUrl || '');
+    } else if (!isContentLoading) {
+      setBgWallpaperImageUrl('');
+    }
+  }, [apiMenuImages, apiBgWallpaperImageUrl, isContentLoading]);
+
+  // When switching tabs, update filter without clearing pending edits
   const handleTabChange = (newFilter: BiteFilter) => {
     setActiveFilter(newFilter);
     setErrorMsg(null);
     setSuccessMsg(null);
-
-    if (newFilter === 'food') {
-      setMenuImages((prev) => ({
-        ...prev,
-        flatbreads: apiMenuImages?.flatbreads || '',
-        appetizers: apiMenuImages?.appetizers || '',
-      }));
-    } else {
-      setMenuImages((prev) => ({
-        ...prev,
-        cocktails: apiMenuImages?.cocktails || '',
-        beer: apiMenuImages?.beer || '',
-      }));
-    }
   };
 
   const handleImageChange = (name: keyof MenuImagesSection, url: string) => {
@@ -96,6 +95,7 @@ const FoodAndDrinks: React.FC = () => {
         flatbreads: (menuImages.flatbreads || '').trim(),
         appetizers: (menuImages.appetizers || '').trim(),
       },
+      bgWallpaperImageUrl: (bgWallpaperImageUrl || '').trim(),
     };
 
     try {
@@ -104,13 +104,13 @@ const FoodAndDrinks: React.FC = () => {
         data: payload,
       });
 
-      setSuccessMsg('Menu images saved successfully!');
+      setSuccessMsg('Settings saved successfully!');
       const timer = setTimeout(() => setSuccessMsg(null), 3500);
       return () => clearTimeout(timer);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Failed to save menu images. Please try again.';
+          ?.message || 'Failed to save settings. Please try again.';
       setErrorMsg(msg);
     }
   };
@@ -192,7 +192,6 @@ const FoodAndDrinks: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-base font-semibold text-white">Cocktails</h3>
-                    <span className="text-xs text-gray-500 font-mono">key: cocktails</span>
                   </div>
                   <span className="text-xs text-[#E1017D] bg-[#E1017D]/10 border border-[#E1017D]/30 px-2.5 py-0.5 rounded-full font-medium">
                     Drinks
@@ -217,7 +216,6 @@ const FoodAndDrinks: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-base font-semibold text-white">Beer</h3>
-                    <span className="text-xs text-gray-500 font-mono">key: beer</span>
                   </div>
                   <span className="text-xs text-[#E1017D] bg-[#E1017D]/10 border border-[#E1017D]/30 px-2.5 py-0.5 rounded-full font-medium">
                     Drinks
@@ -244,7 +242,6 @@ const FoodAndDrinks: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-base font-semibold text-white">Flatbreads</h3>
-                    <span className="text-xs text-gray-500 font-mono">key: flatbreads</span>
                   </div>
                   <span className="text-xs text-[#E1017D] bg-[#E1017D]/10 border border-[#E1017D]/30 px-2.5 py-0.5 rounded-full font-medium">
                     Street Food
@@ -269,7 +266,6 @@ const FoodAndDrinks: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-base font-semibold text-white">Appetizers</h3>
-                    <span className="text-xs text-gray-500 font-mono">key: appetizers</span>
                   </div>
                   <span className="text-xs text-[#E1017D] bg-[#E1017D]/10 border border-[#E1017D]/30 px-2.5 py-0.5 rounded-full font-medium">
                     Street Food
@@ -290,6 +286,36 @@ const FoodAndDrinks: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Common Background Wallpaper Section */}
+          <div className="bg-[#222222] border border-[#333333] rounded-xl p-5 hover:border-[#E1017D]/40 transition-colors">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-4 border-b border-[#333333]">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h3 className="text-base font-semibold text-white">Background Wallpaper</h3>
+                  <span className="text-xs text-[#E1017D] bg-[#E1017D]/10 border border-[#E1017D]/30 px-2.5 py-0.5 rounded-full font-medium">
+                    Common for Drinks & Food
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Upload or paste background wallpaper URL. This wallpaper is shared across both Drinks and Street Food menus.
+                </p>
+              </div>
+            </div>
+
+            <ImageInputWithUpload
+              key="bg-wallpaper-input"
+              value={bgWallpaperImageUrl}
+              onChange={(url) => setBgWallpaperImageUrl(url)}
+              label="Background Wallpaper Image"
+              hint="Recommended: 16:9 widescreen • High resolution (e.g. 1920×1080 or 2560×1440) • JPG, PNG, WebP"
+              placeholder="Paste wallpaper image URL or click Upload"
+              showPreview={true}
+              previewHeight="h-64"
+              previewWidth="w-full"
+              objectFit="cover"
+            />
+          </div>
 
           {/* Action Row */}
           <div className="pt-6 border-t border-[#3A3530] flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -315,7 +341,7 @@ const FoodAndDrinks: React.FC = () => {
                   <span>Saving...</span>
                 </>
               ) : (
-                <span>Save Menu Images</span>
+                <span>Save Changes</span>
               )}
             </button>
           </div>
