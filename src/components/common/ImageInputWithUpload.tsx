@@ -20,6 +20,8 @@ interface ImageInputWithUploadProps {
   previewHeight?: string;
   previewWidth?: string;
   buttonText?: string;
+  maxSizeBytes?: number;
+  maxSizeErrorMessage?: string;
 }
 
 const parseAspectRatio = (aspectRatio?: string, hint?: string): { cssRatio: string; label: string } | null => {
@@ -52,6 +54,8 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   previewHeight = 'h-20',
   previewWidth = 'w-32',
   buttonText = 'Upload',
+  maxSizeBytes,
+  maxSizeErrorMessage,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +95,15 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (maxSizeBytes && file.size > maxSizeBytes) {
+      const defaultMsg = `File size exceeds the allowed limit of ${(maxSizeBytes / (1024 * 1024)).toFixed(1)}MB.`;
+      setError(maxSizeErrorMessage || defaultMsg);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
 
     // Create an instant local object URL preview
     const objectUrl = URL.createObjectURL(file);
