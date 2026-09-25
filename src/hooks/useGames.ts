@@ -26,6 +26,7 @@ export interface Game {
   cardImageUrl?: string;
   bannerImageUrl?: string;
   imageUrl?: string;
+  videoUrl?: string;
   media?: string[];
   features?: string[];
   packages?: GamePackage[];
@@ -62,6 +63,7 @@ export interface CreateGamePayload {
   gameIconUrl?: string;
   cardImageUrl?: string;
   bannerImageUrl?: string;
+  videoUrl?: string;
   headline?: string;
   description?: string;
   isActive?: boolean;
