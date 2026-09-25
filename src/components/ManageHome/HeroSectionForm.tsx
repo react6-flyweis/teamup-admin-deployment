@@ -5,6 +5,7 @@ import TeamUpLogo from '@/assets/TeamUp.png';
 import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
 import { useHeaderCategoriesQuery } from '@/hooks/useHeaderCategories';
 import { useLocationsQuery } from '@/hooks/useLocations';
+import { MAX_VIDEO_SIZE_MB } from '@/constants/upload';
 
 interface HeroSectionFormProps {
   initialData: HeroSection;
@@ -233,7 +234,7 @@ const HeroSectionForm: React.FC<HeroSectionFormProps> = ({
               )}
             </div>
             <ImageInputWithUpload
-              hint="16:9 • MP4/WebM"
+              hint={`16:9 • MP4/WebM • Max ${MAX_VIDEO_SIZE_MB}MB`}
               value={data.videoUrl || ''}
               onChange={(url) => setData({ ...data, videoUrl: url })}
               placeholder="Paste video URL or click upload"

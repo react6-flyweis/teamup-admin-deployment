@@ -75,6 +75,7 @@ export interface HeaderSubItem {
     peopleAllowedPerLane?: number;
     totalLanes?: number;
     minimumAgeRequirement?: string;
+    idRequired?: boolean;
     wheelchairAccessible?: boolean;
     tags?: string[];
     isActive?: boolean;
@@ -84,6 +85,7 @@ export interface HeaderSubItem {
   pageHeadline?: string;
   pageTagline?: string;
   cardDescription?: string; // Description shown on cards (e.g. in Team Parties)
+  cardImage?: string; // 1:1 listing card image
   pageHeroImage?: string;
   videoUrl?: string;
   pageDetails?: {
@@ -92,6 +94,7 @@ export interface HeaderSubItem {
     lanes: string;
     price: string;
     minAge: string;
+    idRequired?: boolean;
     wheelchairAccess: boolean;
   };
   otherGames?: OtherGameCard[];

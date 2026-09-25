@@ -124,12 +124,15 @@ export const useDeleteMenuItemMutation = () => {
         else if (type === 'team-parties') await apiClient.delete(`/team-parties/${linkedItemId}`).catch(() => {});
         else if (type === 'boom-bundle') await apiClient.delete(`/boom-bundles/${linkedItemId}`).catch(() => {});
         else if (type === 'queens-night') await apiClient.delete(`/queens-nights/${linkedItemId}`).catch(() => {});
+        else if (type === 'game') await apiClient.delete(`/games/${linkedItemId}`).catch(() => {});
       }
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['header-categories'] });
       queryClient.invalidateQueries({ queryKey: ['menu-item'] });
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+      queryClient.invalidateQueries({ queryKey: ['game'] });
     },
   });
 };

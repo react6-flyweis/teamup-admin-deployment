@@ -1,8 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import HorizontalDotsIcon from "@/assets/icons/HorizontalDotsIcon";
 import ActionModal from "./modals/ActionModal";
-import GameModal from "./modals/GameModal";
+import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal";
 import { useGamesQuery, useDeleteGameMutation } from "@/hooks/useGames";
+import { useHeaderCategoriesQuery } from "@/hooks/useHeaderCategories";
+import apiClient from "@/utils/apiClient";
 
 interface Game {
   id: string;
@@ -21,18 +25,31 @@ const columns = [
   { key: "totalLanes", label: "Total Lanes" },
   { key: "timeMin", label: "Time (Min)" },
   { key: "pricePerPerson", label: "Price (Per Person)" },
-  { key: "minAge", label: "Min. Age (ID Req)" },
-  { key: "wheelchairAccess", label: "Wheelchair Access" },
+  // { key: "minAge", label: "Min. Age (ID Req)" },
+  // { key: "wheelchairAccess", label: "Wheelchair Access" },
   { key: "action", label: "Action" },
 ];
 
 export default function GameListingManagement() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [showActionModal, setShowActionModal] = useState<number | null>(null);
   const { data: gamesData, isLoading, error } = useGamesQuery();
+  const { data: categoriesData } = useHeaderCategoriesQuery();
   const deleteGameMutation = useDeleteGameMutation();
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [gameToDelete, setGameToDelete] = useState<Game | null>(null);
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setShowActionModal(null);
+    if (showActionModal !== null) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [showActionModal]);
 
   const games: Game[] = useMemo(() => {
     if (!gamesData?.games) return [];
@@ -48,10 +65,12 @@ export default function GameListingManagement() {
       return {
         id: g._id,
         gameName: g.name || g.gameName || "-",
-        totalPeoplePerLane: g.peopleAllowedPerLane != null ? String(g.peopleAllowedPerLane) : "-",
+        totalPeoplePerLane:
+          g.peopleAllowedPerLane != null ? String(g.peopleAllowedPerLane) : "-",
         totalLanes: g.totalLanes != null ? String(g.totalLanes) : "-",
         timeMin: g.timeOption || g.duration || "-",
-        pricePerPerson: typeof price === "number" ? `$${price}` : price ? `$${price}` : "-",
+        pricePerPerson:
+          typeof price === "number" ? `$${price}` : price ? `$${price}` : "-",
         minAge: minAgeStr,
         wheelchairAccess: g.wheelchairAccessible ? "Yes" : "No",
       };
@@ -59,21 +78,76 @@ export default function GameListingManagement() {
   }, [gamesData]);
 
   const handleAddGame = () => {
-    setSelectedGameId(null);
-    setModalMode("add");
-    setShowModal(true);
+    navigate("/game-venue/game/new");
   };
 
   const handleEditGame = (gameId: string) => {
-    setSelectedGameId(gameId);
-    setModalMode("edit");
-    setShowModal(true);
     setShowActionModal(null);
+    navigate(`/game-venue/game/${gameId}`);
   };
 
-  const handleDeleteGame = (gameId: string) => {
-    deleteGameMutation.mutate(gameId);
+  const handleDeleteClick = (game: Game) => {
     setShowActionModal(null);
+    setGameToDelete(game);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!gameToDelete) return;
+    try {
+      await deleteGameMutation.mutateAsync(gameToDelete.id);
+
+      // Clean up linked navigation menu item if one exists
+      if (categoriesData?.categories) {
+        for (const cat of categoriesData.categories) {
+          const matchedItem = (cat.subItems || []).find(
+            (s) =>
+              String(s.linkedItemId) === String(gameToDelete.id) ||
+              ((s as { title?: string }).title || s.name || "").toLowerCase() ===
+                gameToDelete.gameName.toLowerCase(),
+          );
+          if (matchedItem?.id) {
+            await apiClient
+              .delete(`/menu-items/${matchedItem.id}`)
+              .catch(() => {});
+          }
+        }
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["games"] }),
+        queryClient.invalidateQueries({ queryKey: ["game"] }),
+        queryClient.invalidateQueries({ queryKey: ["header-categories"] }),
+        queryClient.invalidateQueries({ queryKey: ["menu-item"] }),
+        queryClient.invalidateQueries({
+          predicate: (query) =>
+            Array.isArray(query.queryKey) &&
+            typeof query.queryKey[0] === "string" &&
+            (query.queryKey[0] === "games" ||
+              query.queryKey[0].startsWith("game")),
+        }),
+      ]);
+      setFeedback({
+        message: `Game "${gameToDelete.gameName}" deleted successfully!`,
+        type: "success",
+      });
+      setGameToDelete(null);
+    } catch (err: unknown) {
+      console.error("Failed to delete game:", err);
+      const errorMsg =
+        (
+          err as {
+            response?: { data?: { message?: string } };
+            message?: string;
+          }
+        )?.response?.data?.message ||
+        (err as Error)?.message ||
+        "Failed to delete game. Please try again.";
+      setFeedback({
+        message: errorMsg,
+        type: "error",
+      });
+      setGameToDelete(null);
+    }
   };
 
   return (
@@ -89,6 +163,25 @@ export default function GameListingManagement() {
           Add Game
         </button>
       </div>
+
+      {feedback && (
+        <div
+          className={`mb-4 p-4 rounded-xl flex items-center justify-between text-sm ${
+            feedback.type === "success"
+              ? "bg-emerald-950/60 border border-emerald-500/30 text-emerald-300"
+              : "bg-rose-950/60 border border-rose-500/30 text-rose-300"
+          }`}
+        >
+          <span>{feedback.message}</span>
+          <button
+            onClick={() => setFeedback(null)}
+            className="text-xs underline hover:no-underline ml-4 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="rounded-[10px] shadow-lg" style={{ overflow: "visible" }}>
         <table
           className="w-full text-center border-separate"
@@ -114,7 +207,10 @@ export default function GameListingManagement() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={columns.length} className="py-8 text-center text-gray-500 font-montserrat">
+                <td
+                  colSpan={columns.length}
+                  className="py-8 text-center text-gray-500 font-montserrat"
+                >
                   <div className="flex justify-center items-center gap-2">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#E1017D]"></div>
                     Loading games...
@@ -123,13 +219,19 @@ export default function GameListingManagement() {
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan={columns.length} className="py-8 text-center text-red-500 font-montserrat">
+                <td
+                  colSpan={columns.length}
+                  className="py-8 text-center text-red-500 font-montserrat"
+                >
                   Failed to load games. Please try again later.
                 </td>
               </tr>
             ) : games.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="py-8 text-center text-gray-400 font-montserrat">
+                <td
+                  colSpan={columns.length}
+                  className="py-8 text-center text-gray-400 font-montserrat"
+                >
                   No games found.
                 </td>
               </tr>
@@ -159,12 +261,12 @@ export default function GameListingManagement() {
                     <td className="py-4 px-2 font-montserrat font-medium text-[14px]">
                       {game.pricePerPerson}
                     </td>
-                    <td className="py-4 px-2 font-montserrat font-medium text-[14px]">
+                    {/* <td className="py-4 px-2 font-montserrat font-medium text-[14px]">
                       {game.minAge}
                     </td>
                     <td className="py-4 px-2 font-montserrat font-medium text-[14px]">
                       {game.wheelchairAccess}
-                    </td>
+                    </td> */}
                     <td className="relative py-4 px-2 pr-6 font-montserrat font-medium text-[14px]">
                       <button
                         onClick={(e) => {
@@ -179,15 +281,19 @@ export default function GameListingManagement() {
                         <ActionModal
                           onClose={() => setShowActionModal(null)}
                           onEdit={() => handleEditGame(game.id)}
-                          onDelete={() => handleDeleteGame(game.id)}
+                          onDelete={() => handleDeleteClick(game)}
                           style={
                             isLastRows
                               ? {
-                                bottom: "100%",
-                                top: "auto",
-                                marginBottom: "8px",
-                              }
-                              : { top: "100%", bottom: "auto", marginTop: "8px" }
+                                  bottom: "100%",
+                                  top: "auto",
+                                  marginBottom: "8px",
+                                }
+                              : {
+                                  top: "100%",
+                                  bottom: "auto",
+                                  marginTop: "8px",
+                                }
                           }
                           direction={isLastRows ? "up" : "down"}
                         />
@@ -201,17 +307,15 @@ export default function GameListingManagement() {
         </table>
       </div>
 
-      {showModal && (
-        <GameModal
-          key={selectedGameId || "new-game"}
-          mode={modalMode}
-          gameIdOrSlug={selectedGameId || undefined}
-          onClose={() => {
-            setShowModal(false);
-            setSelectedGameId(null);
-          }}
-        />
-      )}
+      <ConfirmDeleteModal
+        isOpen={!!gameToDelete}
+        title="Delete Game"
+        message="Are you sure you want to delete this game? This action cannot be undone."
+        itemName={gameToDelete?.gameName}
+        isDeleting={deleteGameMutation.isPending}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setGameToDelete(null)}
+      />
     </section>
   );
 }
