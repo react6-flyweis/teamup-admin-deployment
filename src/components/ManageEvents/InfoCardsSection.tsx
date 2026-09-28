@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { InfoCardsSectionData, InfoCardItem } from '@/types/events';
 import { EditIcon, TrashIcon } from '@/assets/icons';
+import { isVideoUrl, resolvePreviewUrl } from '@/utils/mediaUtils';
 import InfoCardEditModal from './InfoCardEditModal';
 
 interface InfoCardsSectionProps {
@@ -57,13 +58,6 @@ export const InfoCardsSection: React.FC<InfoCardsSectionProps> = ({
     }
 
     setSectionData((prev) => ({ ...prev, cards: updated }));
-  };
-
-  const isVideoUrl = (url: string, type?: string) => {
-    return (
-      type === 'video' ||
-      /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url)
-    );
   };
 
   const handleSave = (e: React.MouseEvent) => {
@@ -143,7 +137,17 @@ export const InfoCardsSection: React.FC<InfoCardsSectionProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {sectionData.cards.map((card, idx) => {
-            const hasVideo = isVideoUrl(card.mediaUrl, card.mediaType);
+            const hasExplicitVideo = Boolean(card.videoUrl?.trim());
+            const hasLegacyVideo = !hasExplicitVideo && (card.mediaType === 'video' || isVideoUrl(card.mediaUrl));
+            const hasVideo = hasExplicitVideo || hasLegacyVideo;
+
+            const videoSrc = hasExplicitVideo
+              ? card.videoUrl
+              : (hasLegacyVideo ? card.mediaUrl : null);
+
+            const posterSrc = hasExplicitVideo && card.mediaUrl
+              ? card.mediaUrl
+              : (!hasVideo ? card.mediaUrl : undefined);
 
             return (
               <div
@@ -153,24 +157,24 @@ export const InfoCardsSection: React.FC<InfoCardsSectionProps> = ({
                 <div>
                   {/* Media Banner */}
                   <div className="relative h-44 bg-black flex items-center justify-center overflow-hidden border-b border-[#2C2825]">
-                    {card.mediaUrl ? (
-                      hasVideo ? (
-                        <video
-                          src={card.mediaUrl}
-                          controls
-                          muted
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <img
-                          src={card.mediaUrl}
-                          alt={card.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      )
+                    {hasVideo && videoSrc ? (
+                      <video
+                        src={resolvePreviewUrl(videoSrc)}
+                        poster={posterSrc ? resolvePreviewUrl(posterSrc) : undefined}
+                        controls
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : card.mediaUrl ? (
+                      <img
+                        src={resolvePreviewUrl(card.mediaUrl)}
+                        alt={card.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
                     ) : (
                       <div className="text-gray-600 text-xs flex flex-col items-center gap-1">
                         <svg className="w-8 h-8 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -182,8 +186,15 @@ export const InfoCardsSection: React.FC<InfoCardsSectionProps> = ({
 
                     {/* Media Type Badge */}
                     <div className="absolute top-2.5 left-2.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black/70 text-white backdrop-blur-md border border-white/10">
-                        {hasVideo ? 'Video' : 'Image'}
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black/75 text-white backdrop-blur-md border border-white/10 flex items-center gap-1.5">
+                        {hasVideo ? (
+                          <>
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#E1017D] animate-pulse"></span>
+                            Video {hasExplicitVideo && card.mediaUrl ? '+ Poster' : ''}
+                          </>
+                        ) : (
+                          'Image'
+                        )}
                       </span>
                     </div>
 
