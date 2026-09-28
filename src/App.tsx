@@ -39,6 +39,7 @@ import { PermissionGuard } from "@/components/PermissionGuard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { navigationItems } from "@/config/navigation";
 import { ROLES } from "@/types";
+import { ToastContainer } from "@/components/common/Toast";
 
 const DefaultRedirect: React.FC = () => {
   const { canAccessTab, isSuperAdmin } = usePermissions();
@@ -63,6 +64,7 @@ const DefaultRedirect: React.FC = () => {
 function App() {
   return (
     <Router>
+      <ToastContainer />
       <Routes>
         {/* Auth Routes - No Layout */}
         <Route path="/auth/login" element={<Login />} />
