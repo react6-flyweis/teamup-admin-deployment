@@ -1,51 +1,84 @@
-import React, { useState, useEffect } from 'react';
-import type { HeaderCategory, HeaderSubItem } from '@/components/ManageHeader/types';
-import { useHeaderCategoriesQuery, useUpdateCategoryMutation, useDeleteCategoryMutation } from '@/hooks/useHeaderCategories';
-import { useLocationsQuery } from '@/hooks/useLocations';
-import { EditIcon, TrashIcon, ChevronDownIcon } from '@/assets/icons';
-import SubItemList from '@/components/ManageHeader/SubItemList';
-import AddLocationModal from '@/components/ManageHeader/AddLocationModal';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import Toggle from '@/components/common/Toggle';
-import TeamUpLogo from '@/assets/TeamUp.png';
-import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from "react";
+import type {
+  HeaderCategory,
+  HeaderSubItem,
+} from "@/components/ManageHeader/types";
+import {
+  useHeaderCategoriesQuery,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
+} from "@/hooks/useHeaderCategories";
+import {
+  useLocationsQuery,
+  useDeleteLocationMutation,
+} from "@/hooks/useLocations";
+import { useLocationStore } from "@/store/locationStore";
+import { EditIcon, TrashIcon, ChevronDownIcon } from "@/assets/icons";
+import SubItemList from "@/components/ManageHeader/SubItemList";
+import AddLocationModal from "@/components/ManageHeader/AddLocationModal";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import Toggle from "@/components/common/Toggle";
+// import TeamUpLogo from "@/assets/TeamUp.png";
+import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast, getApiErrorMessage } from "@/utils/toast";
 
 const ManageHeader: React.FC = () => {
   const queryClient = useQueryClient();
-  const { data: categoriesData, isLoading: isCategoriesLoading } = useHeaderCategoriesQuery();
+  const { data: categoriesData, isLoading: isCategoriesLoading } =
+    useHeaderCategoriesQuery();
   const updateCategory = useUpdateCategoryMutation();
   const deleteCategory = useDeleteCategoryMutation();
-  const { data: locationsData, isLoading: isLocationsLoading } = useLocationsQuery();
+  const { data: locationsData, isLoading: isLocationsLoading } =
+    useLocationsQuery();
+  const deleteLocation = useDeleteLocationMutation();
+  const { selectedLocation, setSelectedLocation } = useLocationStore();
   const [categories, setCategories] = useState<HeaderCategory[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [locations, setLocations] = useState<string[]>(['🇺🇸 Folsom, CA']);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
+  const [locations, setLocations] = useState<
+    Array<{ _id: string; name: string; city?: string; state?: string }>
+  >([{ _id: "default", name: "🇺🇸 Folsom, CA" }]);
+  const [deletingLocation, setDeletingLocation] = useState<{
+    _id: string;
+    name: string;
+  } | null>(null);
+  const [isDeletingLocation, setIsDeletingLocation] = useState(false);
   const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [updatingCategoryIds, setUpdatingCategoryIds] = useState<Record<string, boolean>>({});
+  const [updatingCategoryIds, setUpdatingCategoryIds] = useState<
+    Record<string, boolean>
+  >({});
   const [isReordering, setIsReordering] = useState(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get('tab');
+  const tabParam = searchParams.get("tab");
 
   useEffect(() => {
     if (categoriesData?.categories) {
-      const rawCats = Array.isArray(categoriesData.categories) ? categoriesData.categories : [];
+      const rawCats = Array.isArray(categoriesData.categories)
+        ? categoriesData.categories
+        : [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cats: HeaderCategory[] = rawCats.map((cat: any, index: number) => {
-        const isCatActive = cat.isActive !== undefined ? Boolean(cat.isActive) : !cat.isHidden;
+        const isCatActive =
+          cat.isActive !== undefined ? Boolean(cat.isActive) : !cat.isHidden;
         return {
           ...cat,
           id: cat.id || cat._id,
           name: cat.name,
-          link: cat.link || cat.path || '',
-          path: cat.path || cat.link || '',
-          order: typeof cat.order === 'number' ? cat.order : index + 1,
+          link: cat.link || cat.path || "",
+          path: cat.path || cat.link || "",
+          order: typeof cat.order === "number" ? cat.order : index + 1,
           isActive: isCatActive,
           isHidden: !isCatActive,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           subItems: (cat.subItems || cat.items || []).map((sub: any) => {
-            const isSubActive = sub.isActive !== undefined ? Boolean(sub.isActive) : !sub.isHidden;
+            const isSubActive =
+              sub.isActive !== undefined
+                ? Boolean(sub.isActive)
+                : !sub.isHidden;
             return {
               ...sub,
               id: sub.id || sub._id,
@@ -63,7 +96,12 @@ const ManageHeader: React.FC = () => {
 
       if (cats.length > 0) {
         const matched = tabParam
-          ? cats.find(c => c.id === tabParam || c.name.toLowerCase().replace(/\s+/g, '-') === tabParam.toLowerCase())
+          ? cats.find(
+              (c) =>
+                c.id === tabParam ||
+                c.name.toLowerCase().replace(/\s+/g, "-") ===
+                  tabParam.toLowerCase(),
+            )
           : null;
 
         if (matched) {
@@ -86,9 +124,13 @@ const ManageHeader: React.FC = () => {
     setSearchParams({ tab: categoryId });
   };
 
-  const handleMoveCategory = async (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= categories.length || isReordering) return;
+  const handleMoveCategory = async (
+    index: number,
+    direction: "up" | "down",
+  ) => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= categories.length || isReordering)
+      return;
 
     const previousCategories = [...categories];
     const updated = [...categories];
@@ -112,14 +154,19 @@ const ManageHeader: React.FC = () => {
             categoryId: cat.id,
             name: cat.name,
             order: cat.order,
-          })
-        )
+          }),
+        ),
       );
     } catch (err) {
-      console.error('Error updating category order:', err);
+      console.error("Error updating category order:", err);
       setCategories(previousCategories);
-      setErrorMessage('Failed to update category order. Changes have been reverted.');
-      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      const apiError = getApiErrorMessage(
+        err,
+        "Failed to update category order. Changes have been reverted.",
+      );
+      setErrorMessage(apiError);
+      toast.error(apiError, "Reorder Failed");
+      queryClient.invalidateQueries({ queryKey: ["header-categories"] });
     } finally {
       setIsReordering(false);
     }
@@ -127,16 +174,56 @@ const ManageHeader: React.FC = () => {
 
   useEffect(() => {
     if (locationsData?.locations) {
-      const activeLocs = locationsData.locations.filter(loc => loc.isActive !== false);
-      const formattedLocs = activeLocs.map(loc => `${loc.city}, ${loc.state}`);
+      const activeLocs = locationsData.locations.filter(
+        (loc) => loc.isActive !== false,
+      );
+      const formattedLocs = activeLocs.map((loc) => ({
+        _id: loc._id,
+        name: `${loc.city}, ${loc.state}`,
+        city: loc.city,
+        state: loc.state,
+      }));
       if (formattedLocs.length > 0) {
         setLocations(formattedLocs);
       }
     }
   }, [locationsData]);
 
-  const handleRemoveLocation = (indexToRemove: number) => {
-    setLocations(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  const activeLocationId = selectedLocation?._id || locations[0]?._id;
+
+  const confirmDeleteLocation = async () => {
+    if (!deletingLocation?._id) return;
+    const locToDelete = deletingLocation;
+    const locId = locToDelete._id;
+    const locName = locToDelete.name;
+    setIsDeletingLocation(true);
+    setErrorMessage(null);
+
+    const previousLocations = [...locations];
+    setLocations((prev) => prev.filter((loc) => loc._id !== locId));
+
+    try {
+      if (locId !== "default") {
+        await deleteLocation.mutateAsync(locId);
+      }
+      toast.success(
+        `Location "${locName}" deleted successfully.`,
+        "Location Deleted",
+      );
+    } catch (err) {
+      console.error("Error deleting location:", err);
+      setLocations(previousLocations);
+      const apiError = getApiErrorMessage(
+        err,
+        `Failed to delete location "${locName}". The location has been restored.`,
+      );
+      setErrorMessage(apiError);
+      toast.error(apiError, "Delete Failed");
+      queryClient.invalidateQueries({ queryKey: ["locations"] });
+    } finally {
+      setIsDeletingLocation(false);
+      setDeletingLocation(null);
+    }
   };
 
   const saveCategories = (newCategories: HeaderCategory[]) => {
@@ -144,15 +231,22 @@ const ManageHeader: React.FC = () => {
   };
 
   const toggleVisibility = async (id: string) => {
-    const category = categories.find(cat => cat.id === id);
+    const category = categories.find((cat) => cat.id === id);
     if (!category || updatingCategoryIds[id]) return;
     const previousCategories = [...categories];
-    const isCurrentlyActive = category.isActive !== undefined ? category.isActive : !category.isHidden;
+    const isCurrentlyActive =
+      category.isActive !== undefined ? category.isActive : !category.isHidden;
     const newIsActive = !isCurrentlyActive;
 
     // Optimistically update local UI state
-    saveCategories(categories.map(cat => cat.id === id ? { ...cat, isActive: newIsActive, isHidden: !newIsActive } : cat));
-    setUpdatingCategoryIds(prev => ({ ...prev, [id]: true }));
+    saveCategories(
+      categories.map((cat) =>
+        cat.id === id
+          ? { ...cat, isActive: newIsActive, isHidden: !newIsActive }
+          : cat,
+      ),
+    );
+    setUpdatingCategoryIds((prev) => ({ ...prev, [id]: true }));
     setErrorMessage(null);
 
     try {
@@ -163,12 +257,17 @@ const ManageHeader: React.FC = () => {
         isHidden: !newIsActive,
       });
     } catch (err) {
-      console.error('Error updating category visibility:', err);
+      console.error("Error updating category visibility:", err);
       saveCategories(previousCategories);
-      setErrorMessage('Failed to update category status. Changes have been reverted.');
-      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      const apiError = getApiErrorMessage(
+        err,
+        `Failed to update status for category "${category.name}". Changes have been reverted.`,
+      );
+      setErrorMessage(apiError);
+      toast.error(apiError, "Status Update Failed");
+      queryClient.invalidateQueries({ queryKey: ["header-categories"] });
     } finally {
-      setUpdatingCategoryIds(prev => {
+      setUpdatingCategoryIds((prev) => {
         const next = { ...prev };
         delete next[id];
         return next;
@@ -176,19 +275,22 @@ const ManageHeader: React.FC = () => {
     }
   };
 
-  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(
+    null,
+  );
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
 
   const confirmDeleteCategory = async () => {
     if (!deletingCategoryId) return;
     const id = deletingCategoryId;
+    const categoryToDelete = categories.find((c) => c.id === id);
     setIsDeletingCategory(true);
     setErrorMessage(null);
 
     const previousCategories = [...categories];
     const previousSelectedId = selectedCategoryId;
 
-    const updated = categories.filter(cat => cat.id !== id);
+    const updated = categories.filter((cat) => cat.id !== id);
     saveCategories(updated);
     if (selectedCategoryId === id) {
       const nextId = updated.length > 0 ? updated[0].id : null;
@@ -203,15 +305,20 @@ const ManageHeader: React.FC = () => {
     try {
       await deleteCategory.mutateAsync(id);
     } catch (err) {
-      console.error('Error deleting menu item category:', err);
+      console.error("Error deleting menu item category:", err);
       // Rollback optimistic update on failure
       saveCategories(previousCategories);
       setSelectedCategoryId(previousSelectedId);
       if (previousSelectedId) {
         setSearchParams({ tab: previousSelectedId }, { replace: true });
       }
-      setErrorMessage('Failed to delete category. The item has been restored.');
-      queryClient.invalidateQueries({ queryKey: ['header-categories'] });
+      const apiError = getApiErrorMessage(
+        err,
+        `Failed to delete category "${categoryToDelete?.name || ""}". The item has been restored.`,
+      );
+      setErrorMessage(apiError);
+      toast.error(apiError, "Delete Failed");
+      queryClient.invalidateQueries({ queryKey: ["header-categories"] });
     } finally {
       setIsDeletingCategory(false);
       setDeletingCategoryId(null);
@@ -219,11 +326,18 @@ const ManageHeader: React.FC = () => {
   };
 
   const updateSubItems = (categoryId: string, subItems: HeaderSubItem[]) => {
-    saveCategories(categories.map(cat => cat.id === categoryId ? { ...cat, subItems } : cat));
+    saveCategories(
+      categories.map((cat) =>
+        cat.id === categoryId ? { ...cat, subItems } : cat,
+      ),
+    );
   };
 
-  const selectedCategory = categories.find(c => c.id === selectedCategoryId) || null;
-  const availableGames = (categories.find(c => c.name.toLowerCase().includes('choose game'))?.subItems) || [];
+  const selectedCategory =
+    categories.find((c) => c.id === selectedCategoryId) || null;
+  const availableGames =
+    categories.find((c) => c.name.toLowerCase().includes("choose game"))
+      ?.subItems || [];
 
   const isLoading = isCategoriesLoading || isLocationsLoading;
 
@@ -231,7 +345,9 @@ const ManageHeader: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-white">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E1017D] mb-4"></div>
-        <p className="text-gray-400 text-sm animate-pulse">Loading header data...</p>
+        <p className="text-gray-400 text-sm animate-pulse">
+          Loading header data...
+        </p>
       </div>
     );
   }
@@ -256,16 +372,16 @@ const ManageHeader: React.FC = () => {
       )}
 
       {/* Live Preview Section */}
-      <div className="mb-8 border border-[#3A3530] rounded-xl shadow-2xl relative z-20">
+      {/* <div className="mb-8 border border-[#3A3530] rounded-xl shadow-2xl relative z-20">
         <div className="bg-black relative rounded-xl overflow-visible" style={{ backgroundImage: 'radial-gradient(circle at center, #1a1a1a 0%, #050505 100%)' }}>
           <div className="flex items-center justify-between px-6 py-4">
-            {/* Logo */}
+      
             <div className="shrink-0">
               <img src={TeamUpLogo} alt="Team Up" className="h-10 object-contain" />
             </div>
 
             <div className="flex items-center gap-8 text-sm">
-              {/* Location */}
+         
               <div className="relative group flex items-center gap-2 border border-gray-600 rounded px-3 py-1.5 cursor-pointer hover:bg-gray-800 transition-colors">
                 <span className="font-medium text-[13px] text-white">{locations[0]}</span>
                 <span className="text-gray-400 text-[10px]">▼</span>
@@ -281,7 +397,7 @@ const ManageHeader: React.FC = () => {
                 )}
               </div>
 
-              {/* Nav items from categories */}
+        
               <div className="flex items-center gap-6 font-medium tracking-wide text-[13px]">
                 {categories.filter(c => !c.isHidden).slice(0, 4).map(cat => (
                   <div key={cat.id} className="relative group cursor-pointer">
@@ -289,7 +405,7 @@ const ManageHeader: React.FC = () => {
                       {cat.name}
                       {cat.subItems.length > 0 && <span className="text-[9px] opacity-70">▼</span>}
                     </div>
-                    {/* Dropdown Menu */}
+             
                     {cat.subItems.length > 0 && (
                       <div className="absolute top-full left-0 mt-1 w-48 bg-[#111111] border border-[#3A3530] rounded shadow-2xl opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
                         <div className="py-2">
@@ -307,7 +423,7 @@ const ManageHeader: React.FC = () => {
               </div>
             </div>
 
-            {/* Buttons */}
+        
             <div className="flex items-center gap-3 font-bold text-[11px] uppercase tracking-wider text-center">
               <button className="bg-[#E1017D] hover:bg-pink-700 text-white px-5 py-2 rounded shadow-lg transition-transform hover:scale-105 leading-tight">
                 BOOK <br />GAMES
@@ -317,24 +433,29 @@ const ManageHeader: React.FC = () => {
               </button>
             </div>
           </div>
-          {/* Banner */}
+   
           <div className="bg-[#E1017D] w-full py-2.5 text-center text-white font-black uppercase text-sm tracking-widest shadow-md rounded-b-xl">
             TIPSY THRILLS - SIPS & THRILLS FRI 15TH AUG
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Two-column layout */}
       <div className="flex gap-6 min-h-[calc(100vh-140px)]">
-
         {/* ── LEFT MINI SIDEBAR ── */}
         <div className="w-64 shrink-0 flex flex-col gap-6 h-full">
           {/* CATEGORIES */}
           <div className="bg-[#1C1C1C] rounded-xl border border-[#3A3530] flex flex-col overflow-hidden flex-1">
             <div className="p-4 border-b border-[#3A3530] flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Categories</span>
+              <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+                Categories
+              </span>
               <button
-                onClick={() => navigate(`/manage-header/category/new${selectedCategoryId ? `?tab=${selectedCategoryId}` : ''}`)}
+                onClick={() =>
+                  navigate(
+                    `/manage-header/category/new${selectedCategoryId ? `?tab=${selectedCategoryId}` : ""}`,
+                  )
+                }
                 className="text-xs bg-[#D92D20] hover:bg-red-700 text-white px-2 py-1 rounded transition-colors font-medium"
               >
                 + Add
@@ -346,10 +467,11 @@ const ManageHeader: React.FC = () => {
                 <div
                   key={category.id}
                   onClick={() => handleSelectCategory(category.id)}
-                  className={`group flex items-center justify-between px-3 py-3 cursor-pointer border-b border-[#2A2A2A] transition-all duration-200 ${selectedCategoryId === category.id
-                      ? 'bg-[#2C2C2C] border-l-2 border-l-[#E1017D]'
-                      : 'hover:bg-[#252525] border-l-2 border-l-transparent'
-                    }`}
+                  className={`group flex items-center justify-between px-3 py-3 cursor-pointer border-b border-[#2A2A2A] transition-all duration-200 ${
+                    selectedCategoryId === category.id
+                      ? "bg-[#2C2C2C] border-l-2 border-l-[#E1017D]"
+                      : "hover:bg-[#252525] border-l-2 border-l-transparent"
+                  }`}
                 >
                   {/* Reorder Arrows */}
                   <div
@@ -359,16 +481,20 @@ const ManageHeader: React.FC = () => {
                     <button
                       type="button"
                       disabled={index === 0 || isReordering}
-                      onClick={() => handleMoveCategory(index, 'up')}
+                      onClick={() => handleMoveCategory(index, "up")}
                       className="text-gray-400 hover:text-white p-0.5 disabled:opacity-20 disabled:hover:text-gray-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
                       title="Move Up"
                     >
-                      <ChevronDownIcon size={12} className="rotate-180" color="currentColor" />
+                      <ChevronDownIcon
+                        size={12}
+                        className="rotate-180"
+                        color="currentColor"
+                      />
                     </button>
                     <button
                       type="button"
                       disabled={index === categories.length - 1 || isReordering}
-                      onClick={() => handleMoveCategory(index, 'down')}
+                      onClick={() => handleMoveCategory(index, "down")}
                       className="text-gray-400 hover:text-white p-0.5 disabled:opacity-20 disabled:hover:text-gray-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
                       title="Move Down"
                     >
@@ -377,9 +503,15 @@ const ManageHeader: React.FC = () => {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${category.isHidden ? 'text-gray-500 line-through' :
-                        selectedCategoryId === category.id ? 'text-white' : 'text-gray-300'
-                      }`}>
+                    <p
+                      className={`text-sm font-medium truncate ${
+                        category.isHidden
+                          ? "text-gray-500 line-through"
+                          : selectedCategoryId === category.id
+                            ? "text-white"
+                            : "text-gray-300"
+                      }`}
+                    >
                       {category.name}
                     </p>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
@@ -387,7 +519,12 @@ const ManageHeader: React.FC = () => {
                       {category.link && (
                         <>
                           <span>•</span>
-                          <span className="text-[#00B4D8] truncate max-w-20" title={category.link}>{category.link}</span>
+                          <span
+                            className="text-[#00B4D8] truncate max-w-20"
+                            title={category.link}
+                          >
+                            {category.link}
+                          </span>
                         </>
                       )}
                     </div>
@@ -395,12 +532,16 @@ const ManageHeader: React.FC = () => {
 
                   {/* Actions (show on hover or selected) */}
                   <div
-                    className={`flex items-center gap-1 ml-2 transition-opacity ${selectedCategoryId === category.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                    onClick={e => e.stopPropagation()}
+                    className={`flex items-center gap-1 ml-2 transition-opacity ${selectedCategoryId === category.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <div title={category.isHidden ? 'Show' : 'Hide'}>
+                    <div title={category.isHidden ? "Show" : "Hide"}>
                       <Toggle
-                        checked={category.isActive !== undefined ? category.isActive : !category.isHidden}
+                        checked={
+                          category.isActive !== undefined
+                            ? category.isActive
+                            : !category.isHidden
+                        }
                         onChange={() => toggleVisibility(category.id)}
                         loading={!!updatingCategoryIds[category.id]}
                         disabled={!!updatingCategoryIds[category.id]}
@@ -409,7 +550,11 @@ const ManageHeader: React.FC = () => {
                       />
                     </div>
                     <button
-                      onClick={() => navigate(`/manage-header/category/${category.id}?tab=${category.id}`)}
+                      onClick={() =>
+                        navigate(
+                          `/manage-header/category/${category.id}?tab=${category.id}`,
+                        )
+                      }
                       className="text-blue-400 hover:text-blue-300 p-1 transition-colors"
                     >
                       <EditIcon size={14} color="currentColor" />
@@ -429,7 +574,9 @@ const ManageHeader: React.FC = () => {
           {/* LOCATIONS */}
           <div className="bg-[#1C1C1C] rounded-xl border border-[#3A3530] flex flex-col overflow-hidden min-h-[250px]">
             <div className="p-4 border-b border-[#3A3530] flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Locations</span>
+              <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+                Locations
+              </span>
               <button
                 onClick={() => setIsAddLocationOpen(true)}
                 className="text-xs bg-[#00B4D8] hover:bg-cyan-600 text-white px-2 py-1 rounded transition-colors font-medium"
@@ -438,19 +585,52 @@ const ManageHeader: React.FC = () => {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {locations.map((loc, idx) => (
-                <div key={idx} className="group flex items-center justify-between px-4 py-3 border-b border-[#2A2A2A] hover:bg-[#252525] transition-all duration-200">
-                  <p className="text-sm font-medium text-gray-300 truncate">{loc}</p>
-                  {idx > 0 && (
-                    <button
-                      onClick={() => handleRemoveLocation(idx)}
-                      className="text-red-400 hover:text-red-300 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <TrashIcon size={14} color="currentColor" />
-                    </button>
-                  )}
+              {locations.length === 0 ? (
+                <div className="p-4 text-center text-xs text-gray-500">
+                  No locations found.
                 </div>
-              ))}
+              ) : (
+                locations.map((loc, idx) => {
+                  const isActive =
+                    (selectedLocation &&
+                      (selectedLocation._id === loc._id ||
+                        selectedLocation.name === loc.name)) ||
+                    (!selectedLocation &&
+                      (loc._id === activeLocationId || idx === 0));
+
+                  return (
+                    <div
+                      key={loc._id || idx}
+                      onClick={() => {
+                        const fullLoc = locationsData?.locations?.find(
+                          (l) => l._id === loc._id,
+                        );
+                        if (fullLoc) setSelectedLocation(fullLoc);
+                      }}
+                      className="group flex items-center justify-between px-4 py-3 border-b border-[#2A2A2A] hover:bg-[#252525] transition-all duration-200 cursor-pointer"
+                    >
+                      <p className="text-sm font-medium text-gray-300 truncate">
+                        {loc.name}
+                      </p>
+
+                      {/* Don't hide delete button on first one, hide on active location instead */}
+                      {!isActive && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingLocation(loc);
+                          }}
+                          className="text-red-400 hover:text-red-300 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shrink-0"
+                          title="Delete Location"
+                        >
+                          <TrashIcon size={14} color="currentColor" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -461,20 +641,30 @@ const ManageHeader: React.FC = () => {
             <>
               <div className="px-6 py-4 border-b border-[#3A3530] flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">{selectedCategory.name}</h2>
+                  <h2 className="text-lg font-semibold text-white">
+                    {selectedCategory.name}
+                  </h2>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {selectedCategory.link ? (
-                      <span>Direct link: <span className="text-[#00B4D8]">{selectedCategory.link}</span></span>
+                      <span>
+                        Direct link:{" "}
+                        <span className="text-[#00B4D8]">
+                          {selectedCategory.link}
+                        </span>
+                      </span>
                     ) : (
-                      'Manage sub-items and their page content'
+                      "Manage sub-items and their page content"
                     )}
                   </p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full font-medium ${selectedCategory.isHidden
-                    ? 'bg-red-900/30 text-red-400'
-                    : 'bg-green-900/30 text-green-400'
-                  }`}>
-                  {selectedCategory.isHidden ? 'Hidden' : 'Visible'}
+                <span
+                  className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    selectedCategory.isHidden
+                      ? "bg-red-900/30 text-red-400"
+                      : "bg-green-900/30 text-green-400"
+                  }`}
+                >
+                  {selectedCategory.isHidden ? "Hidden" : "Visible"}
                 </span>
               </div>
               <div className="p-6">
@@ -483,7 +673,9 @@ const ManageHeader: React.FC = () => {
                   categoryName={selectedCategory.name}
                   categoryId={selectedCategory.id}
                   availableGames={availableGames}
-                  onUpdate={(newSubItems) => updateSubItems(selectedCategory.id, newSubItems)}
+                  onUpdate={(newSubItems) =>
+                    updateSubItems(selectedCategory.id, newSubItems)
+                  }
                 />
               </div>
             </>
@@ -496,16 +688,28 @@ const ManageHeader: React.FC = () => {
         </div>
       </div>
 
-
       {/* Confirm Delete Category Modal */}
       <ConfirmDeleteModal
         isOpen={!!deletingCategoryId}
         title="Delete Category"
         message="Are you sure you want to delete this category? This action cannot be undone."
-        itemName={categories.find(c => c.id === deletingCategoryId)?.name}
+        itemName={categories.find((c) => c.id === deletingCategoryId)?.name}
         isDeleting={isDeletingCategory}
         onConfirm={confirmDeleteCategory}
         onCancel={() => setDeletingCategoryId(null)}
+      />
+
+      {/* Confirm Delete Location Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingLocation}
+        title="Delete Location"
+        message="Are you sure you want to delete this location? This action cannot be undone."
+        itemName={deletingLocation?.name}
+        isDeleting={isDeletingLocation}
+        onConfirm={confirmDeleteLocation}
+        onCancel={() => {
+          if (!isDeletingLocation) setDeletingLocation(null);
+        }}
       />
 
       {/* Add Location Modal */}
