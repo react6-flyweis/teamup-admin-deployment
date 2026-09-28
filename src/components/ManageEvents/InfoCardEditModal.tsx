@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { InfoCardItem } from '@/types/events';
-import { CloseIcon, UploadIcon } from '@/assets/icons';
-import { uploadFile } from '@/utils/fileUpload';
+import { CloseIcon } from '@/assets/icons';
+import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
+import { MAX_VIDEO_SIZE_MB } from '@/constants/upload';
 
 interface InfoCardEditModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ const defaultCard: InfoCardItem = {
   title: '',
   description: '',
   mediaUrl: '',
+  videoUrl: '',
   mediaType: 'image',
   order: 1,
   isActive: true,
@@ -29,13 +31,13 @@ export const InfoCardEditModal: React.FC<InfoCardEditModalProps> = ({
   totalCardsCount = 0,
 }) => {
   const [formData, setFormData] = useState<InfoCardItem>(defaultCard);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      setFormData({
+        ...initialData,
+        videoUrl: initialData.videoUrl || '',
+      });
     } else {
       setFormData({
         ...defaultCard,
@@ -43,50 +45,23 @@ export const InfoCardEditModal: React.FC<InfoCardEditModalProps> = ({
         order: totalCardsCount + 1,
       });
     }
-    setUploadError(null);
   }, [initialData, isOpen, totalCardsCount]);
 
   if (!isOpen) return null;
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    setUploadError(null);
-
-    try {
-      const isVideo = file.type.startsWith('video/');
-      const uploadedUrl = await uploadFile(file);
-      setFormData((prev) => ({
-        ...prev,
-        mediaUrl: uploadedUrl,
-        mediaType: isVideo ? 'video' : 'image',
-      }));
-    } catch (err: unknown) {
-      console.error('File upload failed:', err);
-      const apiErr = err as { message?: string };
-      setUploadError(apiErr?.message || 'Failed to upload file. Please try again.');
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!formData.title.trim()) return;
-    onSave(formData);
+
+    onSave({
+      ...formData,
+      mediaType: formData.videoUrl ? 'video' : 'image',
+    });
     onClose();
   };
 
-  const isVideoUrl = (url: string) => {
-    return (
-      formData.mediaType === 'video' ||
-      /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url)
-    );
-  };
+  const hasVideo = Boolean(formData.videoUrl?.trim());
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
@@ -134,100 +109,55 @@ export const InfoCardEditModal: React.FC<InfoCardEditModalProps> = ({
             />
           </div>
 
-          {/* Media Setup */}
+          {/* Media Setup (Image + Optional Video) */}
           <div className="pt-2 border-t border-[#33302B] space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-gray-300">
-                Media (Image or Video)
-              </label>
-              <div className="flex items-center gap-2 bg-[#121212] p-1 rounded-lg border border-[#33302B]">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, mediaType: 'image' })}
-                  className={`px-3 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                    formData.mediaType === 'image'
-                      ? 'bg-[#E1017D] text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Image
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, mediaType: 'video' })}
-                  className={`px-3 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                    formData.mediaType === 'video'
-                      ? 'bg-[#E1017D] text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Video
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={formData.mediaUrl}
-                onChange={(e) => setFormData({ ...formData, mediaUrl: e.target.value })}
-                placeholder={
-                  formData.mediaType === 'video'
-                    ? 'Paste video URL or upload MP4/WebM'
-                    : 'Paste image URL or upload JPEG/PNG/WebP'
-                }
-                className="flex-1 bg-[#121212] border border-[#3A3530] rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-[#E1017D] transition-colors text-sm"
+            {/* Card Image (Required / Fallback Poster) */}
+            <div className="bg-[#242424] border border-[#3A3530] rounded-xl p-4">
+              <ImageInputWithUpload
+                label="Card Image (Initial / Fallback Poster)"
+                hint="16:9 • Rec: 800×450 or 1200×675 px • WebP/JPG/PNG"
+                value={formData.mediaUrl || ''}
+                onChange={(url) => setFormData({ ...formData, mediaUrl: url })}
+                placeholder="Paste photo URL or click upload"
+                accept="image/*"
+                aspectRatio="16:9"
+                previewWidth="w-full"
+                inputClassName="w-full h-10 px-3 rounded bg-[#1C1C1C] border border-[#3A3530] text-white text-sm focus:border-[#E1017D] focus:outline-none"
               />
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={formData.mediaType === 'video' ? 'video/*' : 'image/*'}
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <button
-                type="button"
-                disabled={isUploading}
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-[#2A2A2A] hover:bg-[#333333] text-white px-4 py-2.5 rounded-lg text-sm font-semibold border border-[#3A3530] transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
-              >
-                {isUploading ? (
-                  <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-                ) : (
-                  <UploadIcon size={16} />
-                )}
-                <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
-              </button>
-            </div>
-
-            {uploadError && (
-              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg">
-                {uploadError}
+              <p className="text-xs text-gray-400 mt-2">
+                Displays as the primary card image and serves as the poster / fallback when video is present.
               </p>
-            )}
+            </div>
 
-            {/* Media Preview */}
-            {formData.mediaUrl && (
-              <div className="mt-2 rounded-xl overflow-hidden border border-[#3A3530] bg-black max-h-48 flex items-center justify-center">
-                {isVideoUrl(formData.mediaUrl) ? (
-                  <video
-                    src={formData.mediaUrl}
-                    controls
-                    muted
-                    className="max-h-48 w-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={formData.mediaUrl}
-                    alt={formData.title || 'Preview'}
-                    className="max-h-48 w-full object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
+            {/* Card Video (Optional) */}
+            <div className="bg-[#242424] border border-[#3A3530] rounded-xl p-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-300 font-medium">Card Video (Optional)</span>
+                {hasVideo && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, videoUrl: '' })}
+                    className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded bg-red-950/40 border border-red-900/50 hover:bg-red-900/40 transition-colors cursor-pointer"
+                  >
+                    Remove Video
+                  </button>
                 )}
               </div>
-            )}
+              <ImageInputWithUpload
+                hint={`16:9 • MP4/WebM • Max ${MAX_VIDEO_SIZE_MB}MB`}
+                value={formData.videoUrl || ''}
+                onChange={(url) => setFormData({ ...formData, videoUrl: url })}
+                placeholder="Paste video URL or click upload"
+                accept="video/*"
+                aspectRatio="16:9"
+                previewWidth="w-full"
+                buttonText="Upload Video"
+                inputClassName="w-full h-10 px-3 rounded bg-[#1C1C1C] border border-[#3A3530] text-white text-sm focus:border-[#E1017D] focus:outline-none"
+              />
+              <p className="text-xs text-gray-400 mt-2">
+                Plays inside or behind the card. Leave empty to use only the card photo.
+              </p>
+            </div>
           </div>
 
           {/* Actions */}

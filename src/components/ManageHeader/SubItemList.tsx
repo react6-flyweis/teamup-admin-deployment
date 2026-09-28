@@ -7,6 +7,7 @@ import { useUpdateMenuItemMutation, useDeleteMenuItemMutation } from '@/hooks/us
 import { useQueryClient } from '@tanstack/react-query';
 import SimpleLinkModal from './SimpleLinkModal';
 import ConfirmDeleteModal from '@/components/common/ConfirmDeleteModal';
+import { toast, getApiErrorMessage } from '@/utils/toast';
 
 interface SubItemListProps {
   subItems: HeaderSubItem[];
@@ -61,6 +62,11 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
     } catch (err) {
       console.error('Error updating sub-item visibility:', err);
       onUpdate(previousSubItems);
+      const apiError = getApiErrorMessage(
+        err,
+        `Failed to update status for "${item.name}". Changes have been reverted.`
+      );
+      toast.error(apiError, 'Status Update Failed');
       queryClient.invalidateQueries({ queryKey: ['header-categories'] });
     } finally {
       setUpdatingSubItemIds(prev => {
@@ -90,6 +96,11 @@ const SubItemList: React.FC<SubItemListProps> = ({ subItems, categoryName, categ
       console.error('Error deleting menu item or entity:', err);
       // Rollback optimistic update on failure
       onUpdate(previousSubItems);
+      const apiError = getApiErrorMessage(
+        err,
+        `Failed to delete item "${item.name}". The item has been restored.`
+      );
+      toast.error(apiError, 'Delete Failed');
       queryClient.invalidateQueries({ queryKey: ['header-categories'] });
     } finally {
       setIsDeleting(false);

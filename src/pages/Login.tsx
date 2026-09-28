@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import AuthBackground from "@/assets/AuthBackground.jpg";
@@ -9,7 +9,7 @@ import { useLoginMutation, loginSchema } from "@/hooks/useAuth";
 import type { LoginSchema } from "@/hooks/useAuth";
 
 const Login: React.FC = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -32,7 +32,9 @@ const Login: React.FC = () => {
       await loginMutation.mutateAsync(data);
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } } };
-      const message = errorObj.response?.data?.message || "Invalid credentials or server error. Please try again.";
+      const message =
+        errorObj.response?.data?.message ||
+        "Invalid credentials or server error. Please try again.";
       setError("root", {
         type: "server",
         message,
@@ -40,9 +42,9 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleSignUp = () => {
-    navigate("/auth/register");
-  };
+  // const handleSignUp = () => {
+  //   navigate("/auth/register");
+  // };
 
   return (
     <div className="relative w-screen h-screen bg-white overflow-hidden flex">
@@ -63,7 +65,7 @@ const Login: React.FC = () => {
 
           {/* Form */}
           <form
-             onSubmit={handleSubmit(onSubmit)}
+            onSubmit={handleSubmit(onSubmit)}
             className="w-full max-w-[400px] lg:max-w-[500px]"
           >
             {/* Error Message */}
@@ -130,7 +132,7 @@ const Login: React.FC = () => {
             )}
 
             {/* Forgot Password */}
-            <div className="text-center mb-[32px] lg:mb-[46px]">
+            {/* <div className="text-center mb-[32px] lg:mb-[46px]">
               <button
                 type="button"
                 className="font-raleway font-extrabold text-[20px] lg:text-[30px] leading-[24px] lg:leading-[35px] text-black opacity-80 hover:opacity-100 transition-opacity"
@@ -138,7 +140,7 @@ const Login: React.FC = () => {
               >
                 Forget your Password?
               </button>
-            </div>
+            </div> */}
 
             {/* Sign In Button */}
             <div className="flex justify-center">
@@ -177,18 +179,16 @@ const Login: React.FC = () => {
           <div className="absolute w-[45px] lg:w-[67px] h-[45px] lg:h-[67px] left-[15%] top-[70%] bg-white opacity-20 rounded-full"></div>
 
           {/* Content */}
-          <div className="flex flex-col items-center justify-center h-full px-6 lg:px-8">
-            {/* Title */}
+          {/* <div className="flex flex-col items-center justify-center h-full px-6 lg:px-8">
+     
             <h2 className="font-raleway font-bold text-[40px] lg:text-[70px] leading-[48px] lg:leading-[82px] text-white text-center mb-[24px] lg:mb-[38px]">
               Hello, Friends
             </h2>
 
-            {/* Subtitle */}
             <p className="font-raleway font-medium text-[18px] lg:text-[30px] leading-[22px] lg:leading-[35px] text-center text-white mb-[32px] lg:mb-[47px] max-w-[280px] lg:max-w-[374px]">
               Enter your personal details and start journey with us.
             </p>
 
-            {/* Sign Up Button */}
             <button
               onClick={handleSignUp}
               className="group w-[250px] lg:w-[333px] h-[60px] lg:h-[79px] border-2 border-white rounded-[30px] lg:rounded-[50.5px] flex items-center justify-center hover:bg-white transition-all"
@@ -197,7 +197,7 @@ const Login: React.FC = () => {
                 SIGN UP
               </span>
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
