@@ -3,6 +3,7 @@ import apiClient from '@/utils/apiClient';
 import type { HomeResponse } from './useHome';
 import type { EventPageData } from '@/types/events';
 import { DEFAULT_SOCIAL_EVENTS_DATA, DEFAULT_CORPORATE_EVENTS_DATA } from '@/types/events';
+import { isVideoUrl } from '@/utils/mediaUtils';
 
 export type EventPageType = 'socialEvents' | 'corporateEvents';
 
@@ -60,12 +61,23 @@ export const getInitialEventPageData = (
 
   if (!rawPageData) return defaultData;
 
+  const rawHeroVideo = rawPageData.hero?.videoUrl || (
+    rawPageData.hero?.bgMediaType === 'video' || isVideoUrl(rawPageData.hero?.bgMediaUrl)
+      ? rawPageData.hero?.bgMediaUrl
+      : ''
+  );
+
+  const rawHeroImage = isVideoUrl(rawPageData.hero?.bgMediaUrl)
+    ? defaultData.hero.bgMediaUrl
+    : (rawPageData.hero?.bgMediaUrl || defaultData.hero.bgMediaUrl);
+
   return {
     hero: {
       title: rawPageData.hero?.title ?? defaultData.hero.title,
       subtitle: rawPageData.hero?.subtitle ?? defaultData.hero.subtitle,
-      bgMediaUrl: rawPageData.hero?.bgMediaUrl ?? defaultData.hero.bgMediaUrl,
-      bgMediaType: rawPageData.hero?.bgMediaType ?? defaultData.hero.bgMediaType,
+      bgMediaUrl: rawHeroImage,
+      bgMediaType: rawHeroVideo ? 'video' : 'image',
+      videoUrl: rawHeroVideo || '',
       pageUrl: rawPageData.hero?.pageUrl ?? defaultData.hero.pageUrl,
     },
     ageGroups: {
@@ -79,7 +91,10 @@ export const getInitialEventPageData = (
       sectionTitle: rawPageData.infoCards?.sectionTitle ?? defaultData.infoCards.sectionTitle,
       sectionSubtitle: rawPageData.infoCards?.sectionSubtitle ?? defaultData.infoCards.sectionSubtitle,
       cards: rawPageData.infoCards?.cards && rawPageData.infoCards.cards.length > 0
-        ? rawPageData.infoCards.cards
+        ? rawPageData.infoCards.cards.map((card) => ({
+            ...card,
+            videoUrl: card.videoUrl || (card.mediaType === 'video' || isVideoUrl(card.mediaUrl) ? card.mediaUrl : ''),
+          }))
         : defaultData.infoCards.cards,
     },
   };

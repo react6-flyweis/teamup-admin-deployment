@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { EventsHeroData } from '@/types/events';
-import { UploadIcon } from '@/assets/icons';
-import { uploadFile } from '@/utils/fileUpload';
+import ImageInputWithUpload from '@/components/common/ImageInputWithUpload';
+import { MAX_VIDEO_SIZE_MB } from '@/constants/upload';
 
 interface EventsHeroFormProps {
   initialData: EventsHeroData;
@@ -19,43 +19,11 @@ export const EventsHeroForm: React.FC<EventsHeroFormProps> = ({
   pageLabel,
 }) => {
   const [formData, setFormData] = useState<EventsHeroData>(initialData);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFormData(initialData);
   }, [initialData]);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    setUploadError(null);
-
-    try {
-      const isVideo = file.type.startsWith('video/');
-      const uploadedUrl = await uploadFile(file);
-      setFormData((prev) => ({
-        ...prev,
-        bgMediaUrl: uploadedUrl,
-        bgMediaType: isVideo ? 'video' : 'image',
-      }));
-    } catch (err: unknown) {
-      console.error('File upload failed:', err);
-      const apiErr = err as { message?: string };
-      setUploadError(apiErr?.message || 'Failed to upload background file.');
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const isVideo =
-    formData.bgMediaType === 'video' ||
-    /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(formData.bgMediaUrl || '');
 
   const handleSave = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -67,8 +35,13 @@ export const EventsHeroForm: React.FC<EventsHeroFormProps> = ({
     }
 
     setValidationError(null);
-    onSave(formData);
+    onSave({
+      ...formData,
+      bgMediaType: formData.videoUrl ? 'video' : 'image',
+    });
   };
+
+  const hasVideo = Boolean(formData.videoUrl?.trim());
 
   return (
     <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#3A3530]">
@@ -76,7 +49,7 @@ export const EventsHeroForm: React.FC<EventsHeroFormProps> = ({
         <div>
           <h2 className="text-xl font-semibold text-white">Hero & Landing Banner</h2>
           <p className="text-gray-400 text-sm mt-1">
-            Configure the main banner title and background for the {pageLabel} page.
+            Configure the main banner title, background photo, and optional video for the {pageLabel} page.
           </p>
         </div>
         <span className="self-start sm:self-auto text-xs px-2.5 py-1 rounded bg-[#E1017D]/10 text-[#E1017D] border border-[#E1017D]/30 font-medium">
@@ -120,115 +93,55 @@ export const EventsHeroForm: React.FC<EventsHeroFormProps> = ({
           />
         </div>
 
-        {/* Background Media */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-sm font-medium text-gray-300">
-              Hero Background Media (Image or Video)
-            </label>
-            <div className="flex items-center gap-2 bg-[#121212] p-1 rounded-lg border border-[#33302B]">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, bgMediaType: 'image' })}
-                className={`px-3 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                  !isVideo
-                    ? 'bg-[#E1017D] text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Image
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, bgMediaType: 'video' })}
-                className={`px-3 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                  isVideo
-                    ? 'bg-[#E1017D] text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Video
-              </button>
-            </div>
-          </div>
-
-          {/* Dimension Hint */}
-          <p className="text-xs text-gray-400 mb-2.5">
-            {isVideo
-              ? '16:9 • MP4/WebM'
-              : '16:9 • Rec: 1920×1080 or 2560×1440 px • WebP/JPG/PNG'}
-          </p>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
+        {/* Media Inputs (Image + Optional Video) */}
+        <div className="space-y-4 pt-2">
+          {/* Background Image (Photo / Fallback Poster) */}
+          <div className="bg-[#242424] border border-[#3A3530] rounded-xl p-5">
+            <ImageInputWithUpload
+              label="Hero Background Photo (Initial / Fallback Poster)"
+              hint="16:9 • Rec: 1920×1080 or 2560×1440 px • WebP/JPG/PNG"
               value={formData.bgMediaUrl || ''}
-              onChange={(e) => setFormData({ ...formData, bgMediaUrl: e.target.value })}
-              placeholder={
-                isVideo
-                  ? 'Paste video URL or upload background video'
-                  : 'Paste image URL or upload background image'
-              }
-              className="flex-1 bg-[#121212] border border-[#3A3530] rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-[#E1017D] transition-colors text-sm"
+              onChange={(url) => setFormData({ ...formData, bgMediaUrl: url })}
+              placeholder="Paste photo URL or click upload"
+              accept="image/*"
+              aspectRatio="16:9"
+              previewWidth="w-full max-w-xl"
+              inputClassName="w-full h-10 px-3 rounded bg-[#1C1C1C] border border-[#3A3530] text-white text-sm focus:border-[#E1017D] focus:outline-none"
             />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={isVideo ? 'video/*' : 'image/*'}
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <button
-              type="button"
-              disabled={isUploading}
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-[#2A2A2A] hover:bg-[#333333] text-white px-4 py-2.5 rounded-lg text-sm font-semibold border border-[#3A3530] transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
-            >
-              {isUploading ? (
-                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-              ) : (
-                <UploadIcon size={16} />
-              )}
-              <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
-            </button>
+            <p className="text-xs text-gray-400 mt-2">
+              Displays immediately as the initial poster while the video loads, and serves as the fallback on mobile low-power mode or slow connections.
+            </p>
           </div>
 
-          {uploadError && (
-            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg mt-2">
-              {uploadError}
-            </p>
-          )}
-
-          {/* Clean Media Preview Box (No Title / Subtitle Text Overlay) */}
-          {formData.bgMediaUrl && (
-            <div className="mt-3 relative rounded-xl overflow-hidden border border-[#3A3530] bg-black h-48 sm:h-64 flex items-center justify-center">
-              {isVideo ? (
-                <video
-                  src={formData.bgMediaUrl}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  controls
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <img
-                  src={formData.bgMediaUrl}
-                  alt="Hero Background Preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+          {/* Background Video (Optional) */}
+          <div className="bg-[#242424] border border-[#3A3530] rounded-xl p-5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-300 font-medium">Hero Background Video (Optional)</span>
+              {hasVideo && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, videoUrl: '' })}
+                  className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded bg-red-950/40 border border-red-900/50 hover:bg-red-900/40 transition-colors cursor-pointer"
+                >
+                  Remove Video
+                </button>
               )}
-              <div className="absolute top-3 left-3 pointer-events-none">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-black/70 text-white backdrop-blur-md border border-white/10">
-                  {isVideo ? 'Video Preview' : 'Photo Preview'}
-                </span>
-              </div>
             </div>
-          )}
+            <ImageInputWithUpload
+              hint={`16:9 • MP4/WebM • Max ${MAX_VIDEO_SIZE_MB}MB`}
+              value={formData.videoUrl || ''}
+              onChange={(url) => setFormData({ ...formData, videoUrl: url })}
+              placeholder="Paste video URL or click upload"
+              accept="video/*"
+              aspectRatio="16:9"
+              previewWidth="w-full max-w-xl"
+              buttonText="Upload Video"
+              inputClassName="w-full h-10 px-3 rounded bg-[#1C1C1C] border border-[#3A3530] text-white text-sm focus:border-[#E1017D] focus:outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-2">
+              Autoplays in a loop behind the hero section with the background photo as poster fallback. Leave empty to use only the background photo.
+            </p>
+          </div>
         </div>
       </div>
 

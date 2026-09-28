@@ -3,6 +3,7 @@ export interface EventsHeroData {
   subtitle?: string;
   bgMediaUrl: string;
   bgMediaType?: 'image' | 'video';
+  videoUrl?: string;
   pageUrl?: string;
 }
 
@@ -33,7 +34,8 @@ export interface InfoCardItem {
   title: string;
   description: string;
   mediaUrl: string;
-  mediaType: 'image' | 'video';
+  mediaType?: 'image' | 'video';
+  videoUrl?: string;
   buttonText?: string;
   buttonLink?: string;
   order: number;
