@@ -10,6 +10,7 @@ import {
 } from "@/hooks/useContentPages";
 import { useFooterQuery, useUpdateFooterMutation } from "@/hooks/useFooter";
 import { useLocationStore } from "@/store/locationStore";
+import ImageInputWithUpload from "@/components/common/ImageInputWithUpload";
 
 interface FooterLink {
   id: string;
@@ -76,10 +77,15 @@ const ManageFooter: React.FC = () => {
     tiktok: "",
   });
 
+  const [bgWallpaperImageUrl, setBgWallpaperImageUrl] = useState("");
+
   useEffect(() => {
     if (footerData?.content?.data) {
-      const { companyInfo: apiCompanyInfo, socialMediaLinks: apiSocials } =
-        footerData.content.data;
+      const {
+        companyInfo: apiCompanyInfo,
+        socialMediaLinks: apiSocials,
+        bgWallpaperImageUrl: apiBgWallpaper,
+      } = footerData.content.data;
       setCompanyInfo({
         addressLabel:
           apiCompanyInfo?.addressLabel || apiCompanyInfo?.addresslabel || "",
@@ -92,6 +98,7 @@ const ManageFooter: React.FC = () => {
         instagram: apiSocials?.instagramUrl || "",
         tiktok: apiSocials?.tiktokUrl || "",
       });
+      setBgWallpaperImageUrl(apiBgWallpaper || "");
     }
   }, [footerData]);
 
@@ -113,6 +120,7 @@ const ManageFooter: React.FC = () => {
             instagramUrl: socials.instagram,
             tiktokUrl: socials.tiktok,
           },
+          bgWallpaperImageUrl: bgWallpaperImageUrl.trim(),
         },
         isActive: true,
       });
@@ -354,6 +362,24 @@ const ManageFooter: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Background Wallpaper */}
+          <div className="bg-[#1C1C1C] rounded-xl p-6 border border-[#3A3530]">
+            <h2 className="text-xl font-semibold text-white mb-6">
+              Footer Background Wallpaper
+            </h2>
+            <ImageInputWithUpload
+              value={bgWallpaperImageUrl}
+              onChange={(url) => setBgWallpaperImageUrl(url)}
+              label="Background Wallpaper Image"
+              hint="1920×400 px • WebP/JPG/SVG"
+              placeholder="https://api.teamuparena.com/uploads/footer-background.webp"
+              showPreview={true}
+              previewHeight="h-36"
+              previewWidth="w-full"
+              objectFit="cover"
+            />
           </div>
         </div>
 
