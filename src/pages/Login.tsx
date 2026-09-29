@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-// import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import AuthBackground from "@/assets/AuthBackground.jpg";
@@ -132,15 +132,14 @@ const Login: React.FC = () => {
             )}
 
             {/* Forgot Password */}
-            {/* <div className="text-center mb-[32px] lg:mb-[46px]">
-              <button
-                type="button"
-                className="font-raleway font-extrabold text-[20px] lg:text-[30px] leading-[24px] lg:leading-[35px] text-black opacity-80 hover:opacity-100 transition-opacity"
-                disabled={isSubmitting}
+            <div className="text-center mb-[28px] lg:mb-[38px]">
+              <Link
+                to="/auth/forgot-password"
+                className="font-raleway font-semibold text-[16px] lg:text-[20px] leading-[24px] lg:leading-[28px] text-black opacity-80 hover:opacity-100 hover:text-[#E1017D] transition-all"
               >
-                Forget your Password?
-              </button>
-            </div> */}
+                Forgot your Password?
+              </Link>
+            </div>
 
             {/* Sign In Button */}
             <div className="flex justify-center">
