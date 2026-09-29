@@ -124,6 +124,9 @@ const GameForm: React.FC<GameFormProps> = ({
   const [resolvedMenuItemId, setResolvedMenuItemId] = useState<string>(
     effectiveMenuItemId || "",
   );
+  const [isLinkBroken, setIsLinkBroken] = useState(false);
+  const savedGameIdRef = useRef<string>(effectiveGameId || "");
+  const savedMenuItemIdRef = useRef<string>(effectiveMenuItemId || "");
   const [isSlugEditing, setIsSlugEditing] = useState(false);
   const [hasManuallyEditedSlug, setHasManuallyEditedSlug] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -309,10 +312,24 @@ const GameForm: React.FC<GameFormProps> = ({
       if (!isMounted) return;
 
       if (gameData?._id) {
-        setSelectedGameId(String(gameData._id));
+        const gId = String(gameData._id);
+        setSelectedGameId(gId);
+        savedGameIdRef.current = gId;
+        setIsLinkBroken(false);
+      } else if (!isNewGame) {
+        // Link is broken: Navigation item exists but linked game document not found in DB
+        setSelectedGameId("");
+        savedGameIdRef.current = "";
+        setIsLinkBroken(true);
+      } else {
+        setSelectedGameId("");
+        savedGameIdRef.current = "";
+        setIsLinkBroken(false);
       }
+
       if (effectiveMenuItemId) {
         setResolvedMenuItemId(effectiveMenuItemId);
+        savedMenuItemIdRef.current = effectiveMenuItemId;
       }
 
       const detailsMap: Record<string, string> = {};
@@ -448,6 +465,8 @@ const GameForm: React.FC<GameFormProps> = ({
     availableGames,
   ]);
 
+
+
   const onSubmit = async (data: GameFormValues) => {
     const cleanSlug = (data.slug.trim() || slugify(data.name))
       .replace(/^\//, "")
@@ -457,11 +476,9 @@ const GameForm: React.FC<GameFormProps> = ({
     if (!data.name.trim() || !cleanSlug) return;
 
     try {
-      let targetGameId =
-        selectedGameId ||
-        (initialData?.linkedItemId
-          ? String(initialData.linkedItemId)
-          : undefined);
+      let targetGameId = isLinkBroken
+        ? (selectedGameId || undefined)
+        : (selectedGameId || (initialData?.linkedItemId ? String(initialData.linkedItemId) : undefined));
 
       const numPrice = parseFloat(data.price);
       const parsedTags = data.tagsInput
@@ -500,24 +517,46 @@ const GameForm: React.FC<GameFormProps> = ({
       };
 
       // 1. Sync or Create in /games API
+      // If we have a targetGameId, attempt to update it. If patch fails (404/broken link), fall back to creating a new game.
       if (targetGameId) {
         try {
           await apiClient.patch(`/games/${targetGameId}`, gamePayload);
         } catch (err) {
-          console.error(
-            "Failed to sync game updates via PATCH /api/games/:id",
+          console.warn(
+            `Failed to patch game ${targetGameId} (link may be broken or game deleted). Falling back to creating new game:`,
             err,
           );
+          targetGameId = undefined; // Trigger creation of new game below
         }
-      } else {
+      }
+
+      // If no targetGameId (or if previous PATCH failed due to broken link), create new game
+      if (!targetGameId) {
         try {
           const createGameRes = await apiClient.post("/games", gamePayload);
-          const createdGame =
-            createGameRes?.data?.game || createGameRes?.data || createGameRes;
-          targetGameId = createdGame?._id || createdGame?.id;
+          const raw = createGameRes?.data;
+          const newGameId =
+            raw?.game?._id ||
+            raw?.game?.id ||
+            raw?.data?._id ||
+            raw?.data?.id ||
+            raw?._id ||
+            raw?.id ||
+            createGameRes?.data?.game?._id;
+
+          if (newGameId) {
+            targetGameId = String(newGameId);
+            setSelectedGameId(String(newGameId));
+            savedGameIdRef.current = String(newGameId);
+            setIsLinkBroken(false);
+          }
         } catch (err) {
           console.error("Failed to create game via POST /api/games", err);
         }
+      }
+
+      if (targetGameId) {
+        savedGameIdRef.current = String(targetGameId);
       }
 
       // 2. Sync or Create menu item via /menu-items API
@@ -565,19 +604,51 @@ const GameForm: React.FC<GameFormProps> = ({
       if (targetMenuId && targetMenuId !== "new") {
         try {
           await apiClient.patch(`/menu-items/${targetMenuId}`, menuPayload);
+          savedMenuItemIdRef.current = String(targetMenuId);
         } catch (err) {
-          console.error(
-            "Failed to sync navigation setup via PATCH /api/menu-items/:id",
+          console.warn(
+            "Failed to sync navigation setup via PATCH /api/menu-items/:id, attempting POST:",
             err,
           );
+          if (targetCatId) {
+            try {
+              const createMenuRes = await apiClient.post("/menu-items", {
+                ...menuPayload,
+                order: 1,
+                isActive: true,
+              });
+              const rawMenu = createMenuRes?.data;
+              const newMenuId =
+                rawMenu?.menuItem?._id ||
+                rawMenu?.data?._id ||
+                rawMenu?._id ||
+                createMenuRes?.data?._id;
+              if (newMenuId) {
+                setResolvedMenuItemId(String(newMenuId));
+                savedMenuItemIdRef.current = String(newMenuId);
+              }
+            } catch (createMenuErr) {
+              console.error("Failed to create menu item via POST /api/menu-items", createMenuErr);
+            }
+          }
         }
       } else if (targetCatId) {
         try {
-          await apiClient.post("/menu-items", {
+          const createMenuRes = await apiClient.post("/menu-items", {
             ...menuPayload,
             order: 1,
             isActive: true,
           });
+          const rawMenu = createMenuRes?.data;
+          const newMenuId =
+            rawMenu?.menuItem?._id ||
+            rawMenu?.data?._id ||
+            rawMenu?._id ||
+            createMenuRes?.data?._id;
+          if (newMenuId) {
+            setResolvedMenuItemId(String(newMenuId));
+            savedMenuItemIdRef.current = String(newMenuId);
+          }
         } catch (err) {
           console.error(
             "Failed to create menu item via POST /api/menu-items",
@@ -589,6 +660,7 @@ const GameForm: React.FC<GameFormProps> = ({
       // Invalidate queries so UI immediately reflects updated menu item and game data
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["header-categories"] }),
+        queryClient.invalidateQueries({ queryKey: ["menu-items"] }),
         queryClient.invalidateQueries({ queryKey: ["menu-item"] }),
         queryClient.invalidateQueries({ queryKey: ["games"] }),
         queryClient.invalidateQueries({ queryKey: ["game"] }),
@@ -599,6 +671,8 @@ const GameForm: React.FC<GameFormProps> = ({
       console.error("Submission failed:", err);
     }
   };
+
+
 
   const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -1439,15 +1513,33 @@ const GameForm: React.FC<GameFormProps> = ({
 
       <SuccessModal
         isOpen={showSuccessModal}
-        title={isNewGame ? "Game Added!" : "Game Updated!"}
-        message="Game details have been saved successfully."
+        title={
+          isNewGame
+            ? "Game Added!"
+            : isLinkBroken
+              ? "Game Created & Linked!"
+              : "Game Updated!"
+        }
+        message={
+          isLinkBroken
+            ? "A new game was created and successfully linked to this navigation item."
+            : "Game details have been saved successfully."
+        }
         buttonText="OK"
         onConfirm={() => {
           setShowSuccessModal(false);
+          const finalMenuId =
+            savedMenuItemIdRef.current ||
+            resolvedMenuItemId ||
+            effectiveMenuItemId;
+          const finalGameId =
+            savedGameIdRef.current ||
+            selectedGameId ||
+            effectiveGameId;
           if (onSave) {
             onSave({
-              id: resolvedMenuItemId || effectiveMenuItemId,
-              linkedItemId: selectedGameId || effectiveGameId,
+              id: finalMenuId,
+              linkedItemId: finalGameId,
             });
           } else {
             onClose();

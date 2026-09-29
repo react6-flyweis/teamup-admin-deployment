@@ -25,6 +25,8 @@ import Alerts from "@/pages/Alerts";
 import Insights from "@/pages/Insights";
 import Security from "@/pages/Security";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import StaffDetail from "./pages/StaffDetail";
 import Venues from "./pages/Venues";
 import SocialReviews from "./pages/SocialReviews";
@@ -69,6 +71,9 @@ function App() {
         {/* Auth Routes - No Layout */}
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
+        <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/confirm-password-reset" element={<ResetPassword />} />
 
         {/* Dashboard Routes - With Layout & Protected by AuthGuard */}
         <Route element={<AuthGuard />}>

@@ -58,7 +58,9 @@ apiClient.interceptors.response.use(
       if (
         requestUrl.includes('/auth/logout') ||
         requestUrl.includes('/auth/login') ||
-        requestUrl.includes('/auth/refresh')
+        requestUrl.includes('/auth/refresh') ||
+        requestUrl.includes('/auth/forgot-password') ||
+        requestUrl.includes('/auth/confirm-password-reset')
       ) {
         return Promise.reject(error);
       }

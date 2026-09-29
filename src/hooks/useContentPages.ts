@@ -6,6 +6,13 @@ export interface ContentPage {
   title: string;
   slug: string;
   content: string;
+  tagline?: string;
+  subtitle?: string;
+  heroBgImage?: string;
+  heroImage?: string;
+  bgMediaUrl?: string;
+  heroVideo?: string;
+  videoUrl?: string;
   excerpt?: string;
   metaTitle?: string;
   metaDescription?: string;

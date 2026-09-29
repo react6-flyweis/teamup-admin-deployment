@@ -134,7 +134,7 @@ const FoodAndDrinks: React.FC = () => {
             <p className="text-sm text-gray-400 mt-1">
               {activeFilter === 'drinks'
                 ? 'Upload dedicated menu images for Cocktails and Beer.'
-                : 'Upload dedicated menu images for Flatbreads and Appetizers.'}
+                : 'Upload dedicated menu images for Appetizers and Main Course.'}
             </p>
           </div>
 
@@ -237,30 +237,6 @@ const FoodAndDrinks: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Flatbreads Menu */}
-              <div className="bg-[#222222] border border-[#333333] rounded-xl p-5 hover:border-[#E1017D]/40 transition-colors">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-base font-semibold text-white">Flatbreads</h3>
-                  </div>
-                  <span className="text-xs text-[#E1017D] bg-[#E1017D]/10 border border-[#E1017D]/30 px-2.5 py-0.5 rounded-full font-medium">
-                    Street Food
-                  </span>
-                </div>
-                <ImageInputWithUpload
-                  key="flatbreads-input"
-                  value={menuImages.flatbreads || ''}
-                  onChange={(url) => handleImageChange('flatbreads', url)}
-                  label="Flatbreads Menu Image"
-                  hint="Upload image for flatbreads menu (JPG, PNG, WebP)"
-                  placeholder="Paste image URL or click Upload"
-                  showPreview={true}
-                  previewHeight="h-72"
-                  previewWidth="w-full"
-                  objectFit="contain"
-                />
-              </div>
-
               {/* Appetizers Menu */}
               <div className="bg-[#222222] border border-[#333333] rounded-xl p-5 hover:border-[#E1017D]/40 transition-colors">
                 <div className="flex items-center justify-between mb-4">
@@ -277,6 +253,30 @@ const FoodAndDrinks: React.FC = () => {
                   onChange={(url) => handleImageChange('appetizers', url)}
                   label="Appetizers Menu Image"
                   hint="Upload image for appetizers menu (JPG, PNG, WebP)"
+                  placeholder="Paste image URL or click Upload"
+                  showPreview={true}
+                  previewHeight="h-72"
+                  previewWidth="w-full"
+                  objectFit="contain"
+                />
+              </div>
+
+              {/* Main Course Menu */}
+              <div className="bg-[#222222] border border-[#333333] rounded-xl p-5 hover:border-[#E1017D]/40 transition-colors">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-white">Main Course</h3>
+                  </div>
+                  <span className="text-xs text-[#E1017D] bg-[#E1017D]/10 border border-[#E1017D]/30 px-2.5 py-0.5 rounded-full font-medium">
+                    Street Food
+                  </span>
+                </div>
+                <ImageInputWithUpload
+                  key="flatbreads-input"
+                  value={menuImages.flatbreads || ''}
+                  onChange={(url) => handleImageChange('flatbreads', url)}
+                  label="Main Course Menu Image"
+                  hint="Upload image for main course menu (JPG, PNG, WebP)"
                   placeholder="Paste image URL or click Upload"
                   showPreview={true}
                   previewHeight="h-72"
