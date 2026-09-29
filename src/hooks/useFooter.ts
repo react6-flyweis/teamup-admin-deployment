@@ -14,6 +14,7 @@ export interface FooterData {
     instagramUrl: string;
     tiktokUrl: string;
   };
+  bgWallpaperImageUrl?: string;
 }
 
 export interface FooterContent {
@@ -29,8 +30,8 @@ export interface FooterResponse {
 
 export interface UpdateFooterPayload {
   section: string;
-  data: FooterData;
-  isActive: boolean;
+  data: Partial<FooterData>;
+  isActive?: boolean;
   locationSlug?: string;
 }
 
