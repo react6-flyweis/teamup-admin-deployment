@@ -16,6 +16,9 @@ interface FooterLink {
   label: string;
   url: string;
   content: string;
+  tagline?: string;
+  heroBgImage?: string;
+  heroVideo?: string;
 }
 
 const ManageFooter: React.FC = () => {
@@ -49,9 +52,12 @@ const ManageFooter: React.FC = () => {
       setLinks(
         pagesData.pages.map((page) => ({
           id: page._id,
-          label: page.title.toUpperCase(),
-          url: `/${page.slug}`,
-          content: page.content,
+          label: page.title ? page.title.toUpperCase() : "",
+          url: page.slug ? `/${page.slug}` : "",
+          content: page.content || "",
+          tagline: page.tagline || page.subtitle || "",
+          heroBgImage: page.heroBgImage || page.heroImage || page.bgMediaUrl || "",
+          heroVideo: page.heroVideo || page.videoUrl || "",
         })),
       );
     }
@@ -142,11 +148,21 @@ const ManageFooter: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveModal = async (
-    label: string,
-    url: string,
-    content: string,
-  ) => {
+  const handleSaveModal = async ({
+    label,
+    url,
+    content,
+    tagline,
+    heroBgImage,
+    heroVideo,
+  }: {
+    label: string;
+    url: string;
+    content: string;
+    tagline: string;
+    heroBgImage: string;
+    heroVideo: string;
+  }) => {
     const slug =
       url.replace(/^\//, "") ||
       label
@@ -154,9 +170,26 @@ const ManageFooter: React.FC = () => {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
     const title = label;
-    const excerpt = `${title} information for Team Up.`;
+    const excerpt = tagline || `${title} information for Team Up.`;
     const metaTitle = `${title} | Team Up`;
-    const metaDescription = `Read the Team Up ${title.toLowerCase()} and related information.`;
+    const metaDescription =
+      tagline || `Read the Team Up ${title.toLowerCase()} and related information.`;
+
+    const pagePayload = {
+      title,
+      slug,
+      content,
+      tagline,
+      subtitle: tagline,
+      heroBgImage,
+      heroImage: heroBgImage,
+      bgMediaUrl: heroBgImage,
+      heroVideo,
+      videoUrl: heroVideo,
+      excerpt,
+      metaTitle,
+      metaDescription,
+    };
 
     try {
       if (editingLink) {
@@ -164,7 +197,7 @@ const ManageFooter: React.FC = () => {
         const currentSlug = editingLink.url.replace(/^\//, "");
         await updateMutation.mutateAsync({
           slug: currentSlug,
-          data: { title, slug, content, excerpt, metaTitle, metaDescription },
+          data: pagePayload,
         });
         setSuccessModalData({
           title: "Page Updated!",
@@ -173,12 +206,7 @@ const ManageFooter: React.FC = () => {
       } else {
         // Add new
         await createMutation.mutateAsync({
-          title,
-          slug,
-          content,
-          excerpt,
-          metaTitle,
-          metaDescription,
+          ...pagePayload,
           isActive: true,
         });
         setSuccessModalData({
@@ -248,14 +276,55 @@ const ManageFooter: React.FC = () => {
               {links.map((link) => (
                 <div
                   key={link.id}
-                  className="flex items-center gap-4 p-3 border border-[#3A3530] rounded-lg bg-[#222222]"
+                  className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border border-[#3A3530] rounded-xl bg-[#222222] hover:border-[#4A4540] transition-colors"
                 >
+                  {/* Thumbnail / Media indicator */}
+                  <div className="w-20 h-14 rounded-lg overflow-hidden bg-[#1A1A1A] border border-[#3A3530] shrink-0 relative flex items-center justify-center">
+                    {link.heroBgImage ? (
+                      <img
+                        src={link.heroBgImage}
+                        alt={link.label}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-[10px] text-gray-500 font-medium text-center px-1">
+                        No Media
+                      </div>
+                    )}
+                    {link.heroVideo && (
+                      <span className="absolute bottom-1 right-1 bg-black/80 text-[9px] text-[#E1017D] px-1 rounded font-bold font-mono">
+                        VID
+                      </span>
+                    )}
+                  </div>
+
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-white mb-1">
-                      {link.label}
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-sm font-bold text-white">
+                        {link.label}
+                      </span>
+                      <span className="text-xs text-gray-500 bg-[#1A1A1A] px-2 py-0.5 rounded border border-[#3A3530] font-mono">
+                        {link.url}
+                      </span>
+                      {link.heroBgImage && (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          Hero Image
+                        </span>
+                      )}
+                      {link.heroVideo && (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                          Hero Video
+                        </span>
+                      )}
                     </div>
-                    <div className="text-xs text-gray-500 mb-1">{link.url}</div>
-                    <div className="text-xs text-gray-400 line-clamp-1 italic bg-[#1A1A1A] p-1 rounded">
+
+                    {link.tagline && (
+                      <div className="text-xs text-[#E1017D] font-medium mb-1 line-clamp-1">
+                        {link.tagline}
+                      </div>
+                    )}
+
+                    <div className="text-xs text-gray-400 line-clamp-1 italic bg-[#1A1A1A] p-1.5 rounded border border-[#2F2A26]">
                       {(() => {
                         const plainText = link.content.replace(/<[^>]+>/g, "");
                         if (!plainText) return "No content written...";
@@ -265,16 +334,19 @@ const ManageFooter: React.FC = () => {
                       })()}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+
+                  <div className="flex gap-2 self-end sm:self-center shrink-0">
                     <button
                       onClick={() => handleOpenEditModal(link)}
-                      className="p-2 text-blue-400 hover:text-blue-300"
+                      className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
+                      title="Edit Page"
                     >
                       <EditIcon size={18} color="currentColor" />
                     </button>
                     <button
                       onClick={() => handleDeleteLink(link.id)}
-                      className="p-2 text-red-400 hover:text-red-300"
+                      className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                      title="Delete Page"
                     >
                       <TrashIcon size={18} color="currentColor" />
                     </button>
@@ -432,6 +504,9 @@ const ManageFooter: React.FC = () => {
           initialLabel={editingLink?.label || ""}
           initialUrl={editingLink?.url || ""}
           initialContent={editingLink?.content || ""}
+          initialTagline={editingLink?.tagline || ""}
+          initialHeroBgImage={editingLink?.heroBgImage || ""}
+          initialHeroVideo={editingLink?.heroVideo || ""}
           isAdding={!editingLink}
           onSave={handleSaveModal}
           onClose={() => setIsModalOpen(false)}
