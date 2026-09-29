@@ -38,8 +38,11 @@ export interface BoomBundlesData {
 export interface ChooseGameItem {
   title: string;
   imageUrl: string;
+  videoUrl?: string;
   buttonText: string;
   buttonLink: string;
+  learnMoreText?: string;
+  learnMoreLink?: string;
   order: number;
   isActive: boolean;
 }
