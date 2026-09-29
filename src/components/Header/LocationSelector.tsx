@@ -45,6 +45,16 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     if (activeLocations.length > 0) {
       if (!selectedLocation || !activeLocations.some((loc) => loc._id === selectedLocation._id)) {
         setSelectedLocation(activeLocations[0]);
+      } else {
+        const fresh = activeLocations.find((loc) => loc._id === selectedLocation._id);
+        if (
+          fresh &&
+          (fresh.slug !== selectedLocation.slug ||
+            fresh.name !== selectedLocation.name ||
+            fresh.state !== selectedLocation.state)
+        ) {
+          setSelectedLocation(fresh);
+        }
       }
     }
   }, [activeLocations, selectedLocation, setSelectedLocation]);
