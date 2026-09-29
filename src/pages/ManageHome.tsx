@@ -15,6 +15,7 @@ import {
 } from "@/hooks/useHome";
 import { useLocationStore } from "@/store/locationStore";
 import SuccessModal from "@/components/common/SuccessModal";
+import { isVideoUrl } from "@/utils/mediaUtils";
 
 type Tab = "hero" | "mainBg" | "bundles" | "location" | "games" | "bites" | "newsletter";
 
@@ -96,12 +97,28 @@ const ManageHome: React.FC = () => {
     : [];
 
   // Map API chooseGameSection
-  const chooseGameSectionData: ChooseGameSectionData =
-    rawData?.chooseGameSection || {
-      title: "",
-      subtitle: "",
-      items: [],
-    };
+  const chooseGameSectionData: ChooseGameSectionData = {
+    title: rawData?.chooseGameSection?.title || "",
+    subtitle: rawData?.chooseGameSection?.subtitle || "",
+    items: rawData?.chooseGameSection?.items
+      ? rawData.chooseGameSection.items.map((item, idx) => {
+          const itemVideo =
+            item.videoUrl || (isVideoUrl(item.imageUrl) ? item.imageUrl : "");
+          const itemImage = isVideoUrl(item.imageUrl) ? "" : (item.imageUrl || "");
+          return {
+            title: item.title || "",
+            imageUrl: itemImage,
+            videoUrl: itemVideo,
+            buttonText: item.buttonText || "Book",
+            buttonLink: item.buttonLink || "",
+            learnMoreText: item.learnMoreText || "",
+            learnMoreLink: item.learnMoreLink || "",
+            order: item.order ?? idx + 1,
+            isActive: item.isActive ?? true,
+          };
+        })
+      : [],
+  };
 
   // Map API bitesEvents to BitesAndDrinks and NightsOut
   const bitesData = {
@@ -274,7 +291,21 @@ const ManageHome: React.FC = () => {
     updateHomeMutation.mutate(
       {
         data: {
-          chooseGameSection: sectionData,
+          chooseGameSection: {
+            title: sectionData.title,
+            subtitle: sectionData.subtitle,
+            items: sectionData.items.map((item, idx) => ({
+              title: item.title,
+              imageUrl: item.imageUrl,
+              videoUrl: item.videoUrl || "",
+              buttonText: item.buttonText,
+              buttonLink: item.buttonLink,
+              learnMoreText: item.learnMoreText || "",
+              learnMoreLink: item.learnMoreLink || "",
+              order: item.order ?? idx + 1,
+              isActive: item.isActive ?? true,
+            })),
+          },
         },
       },
       {
