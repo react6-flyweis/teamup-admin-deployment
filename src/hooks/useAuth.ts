@@ -74,20 +74,43 @@ export const useLogoutMutation = () => {
   });
 };
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, "Email is required").email("Invalid email format"),
+});
+
+export type ForgotPasswordSchema = z.infer<typeof forgotPasswordSchema>;
+
 export const useForgotPasswordMutation = () => {
   return useMutation({
-    mutationFn: async (data: { email: string }) => {
+    mutationFn: async (data: ForgotPasswordSchema) => {
       const response = await apiClient.post('/auth/forgot-password', data);
       return response.data;
     },
   });
 };
 
-export const useResetPasswordMutation = () => {
+export const confirmPasswordResetSchema = z
+  .object({
+    token: z.string().min(1, "Reset token is required"),
+    newPassword: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type ConfirmPasswordResetSchema = z.infer<typeof confirmPasswordResetSchema>;
+
+export const useConfirmPasswordResetMutation = () => {
   return useMutation({
-    mutationFn: async (data: { password: string; token?: string }) => {
-      const response = await apiClient.post('/auth/reset-password', data);
+    mutationFn: async (data: { token: string; newPassword: string }) => {
+      const response = await apiClient.post('/auth/confirm-password-reset', data);
       return response.data;
     },
   });
 };
+
+// Kept for backward compatibility
+export const useResetPasswordMutation = useConfirmPasswordResetMutation;
+
