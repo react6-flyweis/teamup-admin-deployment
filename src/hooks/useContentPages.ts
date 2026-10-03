@@ -25,11 +25,13 @@ export interface ContentPagesResponse {
   pages: ContentPage[];
 }
 
-export const useContentPagesQuery = () => {
+export const useContentPagesQuery = (includeInactive: boolean = true) => {
   return useQuery<ContentPagesResponse>({
-    queryKey: ['content-pages'],
+    queryKey: ['content-pages', { includeInactive }],
     queryFn: async () => {
-      const response = await apiClient.get('/content-pages');
+      const response = await apiClient.get('/content-pages', {
+        params: { includeInactive: String(includeInactive) },
+      });
       return response.data;
     },
   });
@@ -64,8 +66,21 @@ export const useUpdateContentPageMutation = () => {
 export const useDeleteContentPageMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiClient.delete(`/content-pages/${id}`);
+    mutationFn: async (slug: string) => {
+      const response = await apiClient.delete(`/content-pages/${slug}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content-pages'] });
+    },
+  });
+};
+
+export const useToggleContentPageActiveMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ slug, isActive }: { slug: string; isActive: boolean }) => {
+      const response = await apiClient.patch(`/content-pages/${slug}`, { isActive });
       return response.data;
     },
     onSuccess: () => {
